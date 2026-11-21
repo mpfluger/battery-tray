@@ -23,4 +23,15 @@ static class Theme
     public static Color SecondaryText => Light ? Color.FromArgb(0x5F, 0x5F, 0x5F) : Color.FromArgb(0xA6, 0xA6, 0xA6);
     public static Color Background => Light ? Color.FromArgb(0xF9, 0xF9, 0xF9) : Color.FromArgb(0x2C, 0x2C, 0x2C);
     public static Color Border => Light ? Color.FromArgb(0xCF, 0xCF, 0xCF) : Color.FromArgb(0x48, 0x48, 0x48);
+    public static Color Hover => Light ? Color.FromArgb(0xE6, 0xE6, 0xE6) : Color.FromArgb(0x3D, 0x3D, 0x3D);
+
+    /// <summary>The Windows accent color, as chosen in Settings → Personalization → Colors.</summary>
+    public static Color Accent =>
+        Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\DWM", "AccentColor", null) is int abgr
+            ? Color.FromArgb(abgr & 0xFF, (abgr >> 8) & 0xFF, (abgr >> 16) & 0xFF)
+            : Color.FromArgb(0x00, 0x78, 0xD4);
+
+    /// <summary>Windows' icon font: Segoe Fluent Icons on Windows 11, Segoe MDL2 Assets on Windows 10.</summary>
+    public static readonly string IconFont =
+        new System.Drawing.Text.InstalledFontCollection().Families.Any(f => f.Name == "Segoe Fluent Icons") ? "Segoe Fluent Icons" : "Segoe MDL2 Assets";
 }

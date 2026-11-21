@@ -45,6 +45,25 @@ public class DeviceTrackerTests
         Assert.Empty(_tracker.Update([], Start.AddMinutes(61)));
     }
 
+    [Fact]
+    public void DeviceSwitchingConnection_IsListedOnce()
+    {
+        _tracker.Update([new("receiver#1", "DeathAdder", 89, false)], Start);
+        // Plugged in to charge: the cable connection answers, the receiver goes quiet.
+        var devices = _tracker.Update([new("cable", "DeathAdder", 89, true)], Start.AddMinutes(1));
+
+        Assert.Equal([("DeathAdder", true)], devices.Select(d => (d.Name, d.Charging)));
+    }
+
+    [Fact]
+    public void IdenticalDevices_AnsweringTogether_AreBothListed()
+    {
+        _tracker.Update([new("pad1", "DualShock 4", 80, false)], Start);
+        var devices = _tracker.Update([new("pad1", "DualShock 4", 80, false), new("pad2", "DualShock 4", 60, false)], Start.AddMinutes(1));
+
+        Assert.Equal(2, devices.Count);
+    }
+
     static (int, bool) Single(IReadOnlyList<DeviceStatus> devices) => (devices.Single().Percent, devices.Single().Unreachable);
 
     static BatteryReading Reading(string name, int percent, bool charging = false) => new(name, name, percent, charging);

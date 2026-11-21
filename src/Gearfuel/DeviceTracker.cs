@@ -26,8 +26,16 @@ sealed class DeviceTracker(Forecast forecast)
 
     public IReadOnlyList<DeviceStatus> Update(IReadOnlyList<BatteryReading> readings, DateTimeOffset now)
     {
+        var answered = readings.Select(r => r.Id).ToHashSet();
         foreach (var reading in readings)
         {
+            // A device that switches connection, e.g. plugged in to charge, can show up under a new id
+            // while its old one goes quiet: the quiet one with the same name is the same device.
+            if (!_devices.ContainsKey(reading.Id))
+            {
+                foreach (var moved in _devices.Where(d => d.Value.Reading.Name == reading.Name && !answered.Contains(d.Key)).Select(d => d.Key).ToList())
+                    _devices.Remove(moved);
+            }
             _devices[reading.Id] = (reading, now);
             forecast.Observe(reading.Id, reading.Percent, reading.Charging, now);
         }
