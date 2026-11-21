@@ -11,6 +11,7 @@ static class Program
         // Handles the installer's hooks (which exit the process) and must run first.
         VelopackApp.Build()
             .OnAfterInstallFastCallback(_ => StartWithWindows.Enabled = true)
+            .OnAfterUpdateFastCallback(_ => StartWithWindows.RefreshAfterUpdate())
             .OnBeforeUninstallFastCallback(_ => StartWithWindows.Enabled = false)
             .Run();
 
