@@ -15,6 +15,8 @@ jobs:
       REPO_URL: ${{ github.server_url }}/${{ github.repository }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the release notes need the commits since the previous tag
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
@@ -42,5 +44,8 @@ jobs:
         run: |
           dotnet vpk upload github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir Releases `
             --tag $env:GITHUB_REF_NAME --releaseName "BatteryTray $env:VERSION" --publish
-          $notes = gh api "repos/${{ github.repository }}/releases/generate-notes" -f tag_name=$env:GITHUB_REF_NAME --jq .body
+          # Changes go straight to main rather than through pull requests, so the notes list commit subjects.
+          $previous = git describe --tags --abbrev=0 "$env:GITHUB_REF_NAME^" 2>$null
+          $range = if ($previous) { "$previous..$env:GITHUB_REF_NAME" } else { $env:GITHUB_REF_NAME }
+          $notes = (git log $range --no-merges --format="- %s") -join "`n"
           gh release edit $env:GITHUB_REF_NAME --notes $notes

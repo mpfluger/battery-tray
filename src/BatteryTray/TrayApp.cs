@@ -25,7 +25,7 @@ sealed class TrayApp : ApplicationContext
         _sources = sources;
         var startWithWindows = new ToolStripMenuItem("Start with Windows") { Checked = StartWithWindows.Enabled, CheckOnClick = true };
         startWithWindows.CheckedChanged += (_, _) => StartWithWindows.Enabled = startWithWindows.Checked;
-        _menu.Items.Add(new ToolStripMenuItem($"BatteryTray {Application.ProductVersion.Split('+')[0]}") { Enabled = false });
+        _menu.Items.Add($"BatteryTray {AppInfo.Version}", null, (_, _) => Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true }));
         _menu.Items.Add("Refresh", null, async (_, _) => await RefreshAsync());
         _menu.Items.Add(startWithWindows);
         _menu.Items.Add(new ToolStripSeparator());
