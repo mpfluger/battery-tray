@@ -7,6 +7,8 @@ namespace BatteryTray;
 sealed class TrayApp : ApplicationContext
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(1);
+    // How long a device that stopped answering keeps its (dimmed) icon.
+    static readonly TimeSpan ForgetAfter = TimeSpan.FromHours(1);
 
     readonly IBatterySource[] _sources;
     readonly Dictionary<string, DeviceIcon> _icons = [];
@@ -60,18 +62,20 @@ sealed class TrayApp : ApplicationContext
     {
         foreach (var reading in readings)
         {
-            if (!_icons.TryGetValue(reading.Id, out var icon))
-            {
-                if (reading.Percent is null) continue;
-                _icons[reading.Id] = icon = new DeviceIcon(_menu);
-            }
+            if (!_icons.TryGetValue(reading.Id, out var icon)) _icons[reading.Id] = icon = new DeviceIcon(_menu);
             icon.Update(reading);
         }
 
-        foreach (var goneId in _icons.Keys.Except(readings.Select(r => r.Id)).ToList())
+        var answered = readings.Select(r => r.Id).ToHashSet();
+        foreach (var (id, icon) in _icons.Where(i => !answered.Contains(i.Key)).ToList())
         {
-            _icons[goneId].Dispose();
-            _icons.Remove(goneId);
+            if (DateTime.Now - icon.LastSeen < ForgetAfter)
+            {
+                icon.MarkUnreachable();
+                continue;
+            }
+            icon.Dispose();
+            _icons.Remove(id);
         }
 
         _placeholder.Visible = _icons.Count == 0;

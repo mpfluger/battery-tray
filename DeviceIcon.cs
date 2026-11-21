@@ -8,24 +8,30 @@ sealed class DeviceIcon(ContextMenuStrip menu) : IDisposable
     const int LowPercent = 20;
 
     readonly NotifyIcon _notifyIcon = new() { ContextMenuStrip = menu };
-    string _summary = "";
+    BatteryReading? _last;
 
-    /// <summary>Shows the reading; a reading without a percentage keeps the last known one.</summary>
+    public DateTime LastSeen { get; private set; }
+
     public void Update(BatteryReading reading)
     {
-        if (reading.Percent is not int percent)
-        {
-            _notifyIcon.Text = $"{_summary} (asleep)";
-            return;
-        }
+        _last = reading;
+        LastSeen = DateTime.Now;
+        var tone = reading.Charging ? Tone.Charging : reading.Percent <= LowPercent ? Tone.Low : Tone.Normal;
+        Show(tone, $"{reading.Name}: {reading.Percent}%{(reading.Charging ? ", charging" : "")}");
+    }
 
-        var tone = reading.Charging ? Tone.Charging : percent <= LowPercent ? Tone.Low : Tone.Normal;
+    /// <summary>Dims the icon for a device that stopped answering (asleep, off or out of range).</summary>
+    public void MarkUnreachable()
+    {
+        if (_last is not null) Show(Tone.Unreachable, $"{_last.Name}: {_last.Percent}% (last seen {LastSeen:t})");
+    }
+
+    void Show(Tone tone, string tooltip)
+    {
         var previous = _notifyIcon.Icon;
-        _notifyIcon.Icon = IconRenderer.Render(percent.ToString(), tone);
+        _notifyIcon.Icon = IconRenderer.Render(_last!.Percent.ToString(), tone);
         previous?.Dispose();
-
-        _summary = $"{reading.Name}: {percent}%{(reading.Charging ? ", charging" : "")}";
-        _notifyIcon.Text = _summary;
+        _notifyIcon.Text = tooltip;
         _notifyIcon.Visible = true;
     }
 

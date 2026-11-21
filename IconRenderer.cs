@@ -4,7 +4,7 @@ using Microsoft.Win32;
 
 namespace BatteryTray;
 
-enum Tone { Normal, Charging, Low }
+enum Tone { Normal, Charging, Low, Unreachable }
 
 /// <summary>Draws short text as a tray icon, in colors that suit the current taskbar theme.</summary>
 static partial class IconRenderer
@@ -55,6 +55,7 @@ static partial class IconRenderer
             (Tone.Charging, false) => Color.FromArgb(0x6C, 0xCB, 0x5F),
             (Tone.Low, true) => Color.FromArgb(0xC4, 0x2B, 0x1C),
             (Tone.Low, false) => Color.FromArgb(0xFF, 0x6B, 0x6B),
+            (Tone.Unreachable, _) => Color.Gray,
             (_, true) => Color.Black,
             _ => Color.White,
         };

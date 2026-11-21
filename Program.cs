@@ -11,7 +11,7 @@ static class Program
         if (!isFirstInstance) return;
 
         ApplicationConfiguration.Initialize();
-        using var app = new TrayApp(new RazerMice(), new LogitechReceivers(), new PlayStationControllers());
+        using var app = new TrayApp(new BluetoothDevices(), new RazerDevices(), new LogitechDevices(), new PlayStationControllers());
         Application.Run(app);
     }
 }

@@ -5,7 +5,7 @@ using Microsoft.Win32.SafeHandles;
 namespace BatteryTray.Devices;
 
 /// <summary>A HID top-level collection, the unit Windows exposes HID devices as.</summary>
-sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, ushort UsagePage, ushort Usage, int InputReportLength, int FeatureReportLength)
+sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, string ProductName, ushort UsagePage, ushort Usage, int InputReportLength, int FeatureReportLength)
 {
     public static IReadOnlyList<HidDevice> All() =>
         InterfacePaths().Select(TryDescribe).OfType<HidDevice>().ToList();
@@ -46,7 +46,9 @@ sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, 
         try
         {
             if (HidP_GetCaps(preparsed, out var caps) != HidpStatusSuccess) return null;
-            return new HidDevice(path, attributes.VendorId, attributes.ProductId, caps.UsagePage, caps.Usage, caps.InputReportByteLength, caps.FeatureReportByteLength);
+            var name = new char[127]; // the longest string a USB descriptor holds, plus a terminator
+            var productName = HidD_GetProductString(handle, name, name.Length * sizeof(char)) ? new string(name).TrimEnd('\0') : "";
+            return new HidDevice(path, attributes.VendorId, attributes.ProductId, productName, caps.UsagePage, caps.Usage, caps.InputReportByteLength, caps.FeatureReportByteLength);
         }
         finally
         {
@@ -99,6 +101,10 @@ sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, 
 
     [LibraryImport("hid.dll")]
     private static partial int HidP_GetCaps(nint preparsed, out HidpCaps caps);
+
+    [LibraryImport("hid.dll", StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    private static partial bool HidD_GetProductString(SafeFileHandle handle, [Out] char[] buffer, int byteLength);
 
     [LibraryImport("hid.dll")]
     [return: MarshalAs(UnmanagedType.U1)]

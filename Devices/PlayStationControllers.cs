@@ -26,13 +26,13 @@ sealed class PlayStationControllers : IBatterySource
         {
             if (device.VendorId != Sony || !Models.TryGetValue(device.ProductId, out var model)) continue;
 
-            var (percent, charging) = await ReadBatteryAsync(device, isDualSense: model.StartsWith("DualSense"));
-            readings.Add(new(device.Path, model, percent, charging));
+            if (await ReadBatteryAsync(device, isDualSense: model.StartsWith("DualSense")) is (var percent, var charging))
+                readings.Add(new(device.Path, model, percent, charging));
         }
         return readings;
     }
 
-    static async Task<(int?, bool)> ReadBatteryAsync(HidDevice device, bool isDualSense)
+    static async Task<(int Percent, bool Charging)?> ReadBatteryAsync(HidDevice device, bool isDualSense)
     {
         // Paths of Bluetooth HID devices contain the HID service UUID.
         var bluetooth = device.Path.Contains("{00001124-", StringComparison.OrdinalIgnoreCase);
@@ -63,7 +63,7 @@ sealed class PlayStationControllers : IBatterySource
         }
         catch (OperationCanceledException)
         {
-            return (null, false);
+            return null;
         }
     }
 
