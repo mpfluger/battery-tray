@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Get version from tag
+        run: Add-Content $env:GITHUB_ENV "VERSION=$($env:GITHUB_REF_NAME.TrimStart('v'))"
+
+      - name: Test
+        run: dotnet test -c Release
+
+      - name: Publish
+        run: dotnet publish src/BatteryTray -c Release -r win-x64 --self-contained false -p:Version=$env:VERSION -o publish
+
+      - name: Package
+        run: |
+          dotnet tool restore
+          # The previous release lets Velopack build a small delta update.
+          dotnet vpk download github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir Releases
+          dotnet vpk pack --packId BatteryTray --packVersion $env:VERSION --packDir publish --mainExe BatteryTray.exe `
+            --packTitle BatteryTray --packAuthors "Mark Pfluger" --icon src/BatteryTray/BatteryTray.ico `
+            --framework net10.0-x64-desktop --outputDir Releases
+
+      - name: Create GitHub release
+        run: |
+          dotnet vpk upload github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir Releases `
+            --tag $env:GITHUB_REF_NAME --releaseName "BatteryTray $env:VERSION" --publish
+          $notes = gh api "repos/${{ github.repository }}/releases/generate-notes" -f tag_name=$env:GITHUB_REF_NAME --jq .body
+          gh release edit $env:GITHUB_REF_NAME --notes $notes

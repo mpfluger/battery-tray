@@ -6,6 +6,7 @@ namespace BatteryTray;
 sealed class DeviceIcon(ContextMenuStrip menu) : IDisposable
 {
     const int LowPercent = 20;
+    const int MaxTooltipLength = 127; // NotifyIcon throws beyond this
 
     readonly NotifyIcon _notifyIcon = new() { ContextMenuStrip = menu };
     BatteryReading? _last;
@@ -20,7 +21,7 @@ sealed class DeviceIcon(ContextMenuStrip menu) : IDisposable
         Show(tone, $"{reading.Name}: {reading.Percent}%{(reading.Charging ? ", charging" : "")}");
     }
 
-    /// <summary>Dims the icon for a device that stopped answering (asleep, off or out of range).</summary>
+    /// <summary>Dims the icon for a device that stopped answering (asleep, off or out of range), keeping its last level.</summary>
     public void MarkUnreachable()
     {
         if (_last is not null) Show(Tone.Unreachable, $"{_last.Name}: {_last.Percent}% (last seen {LastSeen:t})");
@@ -31,7 +32,7 @@ sealed class DeviceIcon(ContextMenuStrip menu) : IDisposable
         var previous = _notifyIcon.Icon;
         _notifyIcon.Icon = IconRenderer.Render(_last!.Percent.ToString(), tone);
         previous?.Dispose();
-        _notifyIcon.Text = tooltip;
+        _notifyIcon.Text = tooltip.Length <= MaxTooltipLength ? tooltip : tooltip[..MaxTooltipLength];
         _notifyIcon.Visible = true;
     }
 

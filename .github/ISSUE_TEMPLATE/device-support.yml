@@ -1,0 +1,45 @@
+name: Device not shown
+description: A wireless device with a battery doesn't get an icon.
+labels: [device support]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Brand and model.
+      placeholder: Logitech MX Master 3S
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      options:
+        - USB receiver (dongle)
+        - Bluetooth
+        - USB cable
+    validations:
+      required: true
+  - type: textarea
+    id: hardware-ids
+    attributes:
+      label: Hardware IDs
+      description: >
+        In Device Manager, find the device (or its receiver), open Properties → Details → Hardware Ids,
+        and paste the values. They identify the device's protocol.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: settings-battery
+    attributes:
+      label: Does Windows show its battery level in Settings → Bluetooth & devices?
+      options:
+        - "Yes"
+        - "No"
+        - Not a Bluetooth device
+  - type: input
+    id: version
+    attributes:
+      label: BatteryTray version
+      description: Shown at the top of the tray icon's menu.

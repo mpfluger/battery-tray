@@ -53,12 +53,7 @@ sealed class PlayStationControllers : IBatterySource
             while (true)
             {
                 await stream.ReadExactlyAsync(report, timeout.Token);
-                if (StatusOffset(report[0], bluetooth, isDualSense) is not int offset) continue;
-
-                var status = report[offset];
-                var level = status & 0x0F; // tenths of a full charge
-                var charging = isDualSense ? status >> 4 == 1 : (status & 0x10) != 0 && level < 10;
-                return (Math.Min(level * 10 + 5, 100), charging);
+                if (ParseBattery(report, bluetooth, isDualSense) is { } battery) return battery;
             }
         }
         catch (OperationCanceledException)
@@ -67,13 +62,22 @@ sealed class PlayStationControllers : IBatterySource
         }
     }
 
-    // Where the battery status byte sits in each input report that has one.
-    static int? StatusOffset(byte reportId, bool bluetooth, bool isDualSense) => (reportId, bluetooth, isDualSense) switch
+    /// <returns>Null for reports that carry no battery status.</returns>
+    internal static (int Percent, bool Charging)? ParseBattery(ReadOnlySpan<byte> report, bool bluetooth, bool isDualSense)
     {
-        (0x01, false, false) => 30,
-        (0x11, true, false) => 32,
-        (0x01, false, true) => 53,
-        (0x31, true, true) => 54,
-        _ => null,
-    };
+        int? statusOffset = (report[0], bluetooth, isDualSense) switch
+        {
+            (0x01, false, false) => 30,
+            (0x11, true, false) => 32,
+            (0x01, false, true) => 53,
+            (0x31, true, true) => 54,
+            _ => null,
+        };
+        if (statusOffset is not int offset) return null;
+
+        var status = report[offset];
+        var level = status & 0x0F; // tenths of a full charge
+        var charging = isDualSense ? status >> 4 == 1 : (status & 0x10) != 0 && level < 10;
+        return (Math.Min(level * 10 + 5, 100), charging);
+    }
 }

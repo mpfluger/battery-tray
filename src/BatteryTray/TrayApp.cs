@@ -7,7 +7,9 @@ namespace BatteryTray;
 sealed class TrayApp : ApplicationContext
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(1);
-    // How long a device that stopped answering keeps its (dimmed) icon.
+    // Devices that stop answering are often just asleep, so their last level stays as is for a while,
+    // then shows dimmed, then goes away.
+    static readonly TimeSpan DimAfter = TimeSpan.FromMinutes(15);
     static readonly TimeSpan ForgetAfter = TimeSpan.FromHours(1);
 
     readonly IBatterySource[] _sources;
@@ -21,9 +23,14 @@ sealed class TrayApp : ApplicationContext
     public TrayApp(params IBatterySource[] sources)
     {
         _sources = sources;
+        var startWithWindows = new ToolStripMenuItem("Start with Windows") { Checked = StartWithWindows.Enabled, CheckOnClick = true };
+        startWithWindows.CheckedChanged += (_, _) => StartWithWindows.Enabled = startWithWindows.Checked;
+        _menu.Items.Add(new ToolStripMenuItem($"BatteryTray {Application.ProductVersion.Split('+')[0]}") { Enabled = false });
         _menu.Items.Add("Refresh", null, async (_, _) => await RefreshAsync());
+        _menu.Items.Add(startWithWindows);
+        _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("Exit", null, (_, _) => ExitThread());
-        _placeholder = new NotifyIcon { Icon = IconRenderer.Render("–", Tone.Normal), Text = "No devices found", ContextMenuStrip = _menu };
+        _placeholder = new NotifyIcon { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath), Text = "BatteryTray: no devices found", ContextMenuStrip = _menu };
         _timer.Tick += async (_, _) => await RefreshAsync();
         _timer.Start();
         _ = RefreshAsync();
@@ -69,13 +76,16 @@ sealed class TrayApp : ApplicationContext
         var answered = readings.Select(r => r.Id).ToHashSet();
         foreach (var (id, icon) in _icons.Where(i => !answered.Contains(i.Key)).ToList())
         {
-            if (DateTime.Now - icon.LastSeen < ForgetAfter)
+            var unseenFor = DateTime.Now - icon.LastSeen;
+            if (unseenFor > ForgetAfter)
+            {
+                icon.Dispose();
+                _icons.Remove(id);
+            }
+            else if (unseenFor > DimAfter)
             {
                 icon.MarkUnreachable();
-                continue;
             }
-            icon.Dispose();
-            _icons.Remove(id);
         }
 
         _placeholder.Visible = _icons.Count == 0;

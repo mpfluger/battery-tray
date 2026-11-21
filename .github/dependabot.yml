@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      # The app's Velopack library and the vpk packaging tool must stay on the same version.
+      velopack:
+        patterns: [Velopack, vpk]

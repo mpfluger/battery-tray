@@ -10,8 +10,8 @@ sealed class RazerDevices : IBatterySource
 {
     const ushort Razer = 0x1532;
     const int ReportLength = 91; // report id + 90-byte message
-    const byte PowerClass = 0x07, GetLevel = 0x80, GetCharging = 0x84;
-    const byte StatusSuccess = 0x02;
+    internal const byte GetLevel = 0x80, GetCharging = 0x84;
+    const byte PowerClass = 0x07, StatusSuccess = 0x02;
 
     // Each model answers to one transaction id; these cover the known ones, newest models first.
     static readonly byte[] TransactionIds = [0x1F, 0x3F, 0xFF];
@@ -38,12 +38,7 @@ sealed class RazerDevices : IBatterySource
 
     static async Task<byte?> QueryAsync(SafeFileHandle handle, byte transactionId, byte command)
     {
-        var request = new byte[ReportLength];
-        request[2] = transactionId;
-        request[6] = 2; // argument count
-        request[7] = PowerClass;
-        request[8] = command;
-        request[89] = request[3..89].Aggregate((checksum, b) => (byte)(checksum ^ b));
+        var request = Request(transactionId, command);
 
         // Razer Synapse talks to the same device, so a reply may answer its request instead; retry then.
         for (var attempt = 0; attempt < 3; attempt++)
@@ -53,9 +48,29 @@ sealed class RazerDevices : IBatterySource
 
             var reply = new byte[ReportLength];
             if (!HidDevice.GetFeature(handle, reply)) return null;
-            if (reply[2] == transactionId && reply[7] == PowerClass && reply[8] == command)
-                return reply[1] == StatusSuccess ? reply[10] : null;
+            if (ParseReply(reply, request) is (true, var value)) return value;
         }
         return null;
+    }
+
+    internal static byte[] Request(byte transactionId, byte command)
+    {
+        var request = new byte[ReportLength];
+        request[2] = transactionId;
+        request[6] = 2; // argument count
+        request[7] = PowerClass;
+        request[8] = command;
+        request[89] = request[3..89].Aggregate((checksum, b) => (byte)(checksum ^ b));
+        return request;
+    }
+
+    /// <returns>
+    /// Whether the reply answers <paramref name="request"/>, and if so its value,
+    /// which is null when the device didn't respond (asleep, off or the wrong transaction id).
+    /// </returns>
+    internal static (bool AnswersRequest, byte? Value) ParseReply(byte[] reply, byte[] request)
+    {
+        var answersRequest = reply[2] == request[2] && reply[7] == request[7] && reply[8] == request[8];
+        return (answersRequest, answersRequest && reply[1] == StatusSuccess ? reply[10] : null);
     }
 }
