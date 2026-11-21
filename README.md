@@ -6,7 +6,7 @@
 
 Battery levels of your wireless mice, keyboards and controllers, right in the Windows taskbar: one icon per device, with its percentage on it.
 
-![The taskbar's notification area with three BatteryTray icons showing 82, 75 and 88](docs/screenshot.png)
+![Three BatteryTray icons in the taskbar, showing 85, 82 and 88 percent](docs/screenshot.png)
 
 ## Install
 
