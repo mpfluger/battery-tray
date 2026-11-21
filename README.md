@@ -3,9 +3,9 @@
 [![CI](https://github.com/mpfluger/gearfuel/actions/workflows/ci.yml/badge.svg)](https://github.com/mpfluger/gearfuel/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/mpfluger/gearfuel)](https://github.com/mpfluger/gearfuel/releases/latest)
 
-Battery levels of your wireless mice, keyboards and controllers, right in the Windows taskbar: one icon per device, with its percentage on it.
+Battery levels of your wireless mice, keyboards and controllers in one Windows tray icon, with how long each will last.
 
-![Three Gearfuel icons in the taskbar, showing 85, 82 and 88 percent](docs/screenshot.png)
+![Example of Gearfuel's hover card: a controller low at 18% with 5 hours left, a mouse at 88% with 3 weeks left, a keyboard asleep, and headphones charging](docs/hover-card.png)
 
 ## Install
 
@@ -13,7 +13,7 @@ Download **Gearfuel-win-Setup.exe** from the [latest release](https://github.com
 
 The installer isn't code-signed yet, so Windows SmartScreen may warn about it: choose *More info → Run anyway*.
 
-Windows hides new tray icons in the overflow menu; drag them onto the taskbar to keep them in sight. To uninstall, use *Settings → Apps*.
+Windows hides new tray icons in the overflow menu; drag Gearfuel's onto the taskbar to keep it in sight. To uninstall, use *Settings → Apps*.
 
 ## Supported devices
 
@@ -24,13 +24,14 @@ Windows hides new tray icons in the overflow menu; drag them onto the taskbar to
 | Logitech devices with HID++ 2.0 battery reporting (most current mice and keyboards) | LIGHTSPEED, Bolt or Unifying receiver, or cable |
 | Sony DualShock 4, DualSense, DualSense Edge | USB or Bluetooth |
 
-Tested with a Razer DeathAdder V3 HyperSpeed, a Logitech PRO X TKL and a DualShock 4. If your device has a battery but no icon, [open an issue](https://github.com/mpfluger/gearfuel/issues/new?template=device-support.yml).
+Tested with a Razer DeathAdder V3 HyperSpeed, a Logitech PRO X TKL and a DualShock 4. If your device has a battery but doesn't show up, [open an issue](https://github.com/mpfluger/gearfuel/issues/new?template=device-support.yml).
 
 ## Usage
 
-- **Green**: charging. **Red**: 20% or less.
-- **Gray**: no answer for 15 minutes (off, or out of range). The icon keeps the last known level, and goes away after an hour. Mice and keyboards that are just asleep keep their normal color.
-- Hover an icon for the device's name. Right-click for *Refresh* and *Start with Windows*.
+- The icon has up to two rings: outside, the device that needs charging soonest; inside, the next one. A full ring is a full battery.
+- **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes; it goes away after an hour. Mice and keyboards that are just asleep keep their color.
+- Hover the icon for every device, with its time left. That shows once a device has been draining for a day, and while charging, as the time until full.
+- Right-click for *Refresh* and *Start with Windows*.
 
 Everything runs locally. The only network access is a daily check for updates on GitHub.
 

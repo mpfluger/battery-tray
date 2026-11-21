@@ -3,21 +3,22 @@ using Gearfuel.Devices;
 
 namespace Gearfuel;
 
-/// <summary>Polls the battery sources and keeps one tray icon per device in sync.</summary>
+/// <summary>Polls the battery sources and shows the result as one tray icon, with a card listing every device on hover.</summary>
 sealed class TrayApp : ApplicationContext
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(1);
-    // Devices that stop answering are often just asleep, so their last level stays as is for a while,
-    // then shows dimmed, then goes away.
-    static readonly TimeSpan DimAfter = TimeSpan.FromMinutes(15);
-    static readonly TimeSpan ForgetAfter = TimeSpan.FromHours(1);
 
     readonly IBatterySource[] _sources;
-    readonly Dictionary<string, DeviceIcon> _icons = [];
+    readonly DeviceTracker _tracker = new(new Forecast(Forecast.DefaultPath));
     readonly ContextMenuStrip _menu = new();
-    readonly System.Windows.Forms.Timer _timer = new() { Interval = (int)PollInterval.TotalMilliseconds };
-    // Keeps the menu (and Exit) reachable while no device is found.
-    readonly NotifyIcon _placeholder;
+    readonly Icon _appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)!;
+    readonly NotifyIcon _notifyIcon;
+    readonly HoverCard _card = new();
+    readonly System.Windows.Forms.Timer _pollTimer = new() { Interval = (int)PollInterval.TotalMilliseconds };
+    // Windows reports the pointer moving over a tray icon, but not leaving it, so the card checks for that itself.
+    readonly System.Windows.Forms.Timer _hoverTimer = new() { Interval = 100 };
+    IReadOnlyList<DeviceStatus> _devices = [];
+    Point _hoverPoint;
     bool _refreshing;
 
     public TrayApp(params IBatterySource[] sources)
@@ -30,9 +31,15 @@ sealed class TrayApp : ApplicationContext
         _menu.Items.Add(startWithWindows);
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("Exit", null, (_, _) => ExitThread());
-        _placeholder = new NotifyIcon { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath), Text = "Gearfuel: no devices found", ContextMenuStrip = _menu };
-        _timer.Tick += async (_, _) => await RefreshAsync();
-        _timer.Start();
+        _menu.Opening += (_, _) => HideCard();
+
+        // No tooltip text: it would cover the card.
+        _notifyIcon = new NotifyIcon { Icon = _appIcon, ContextMenuStrip = _menu, Visible = true };
+        _notifyIcon.MouseMove += (_, _) => ShowCard();
+        _hoverTimer.Tick += (_, _) => HideCardIfPointerLeft();
+
+        _pollTimer.Tick += async (_, _) => await RefreshAsync();
+        _pollTimer.Start();
         _ = RefreshAsync();
     }
 
@@ -43,7 +50,12 @@ sealed class TrayApp : ApplicationContext
         try
         {
             var readings = await Task.WhenAll(_sources.Select(ReadAsync));
-            Show(readings.SelectMany(r => r).ToList());
+            _devices = _tracker.Update(readings.SelectMany(r => r).ToList(), DateTimeOffset.Now);
+
+            var previous = _notifyIcon.Icon;
+            _notifyIcon.Icon = _devices.Count == 0 ? _appIcon : RingIcon.Render(_devices);
+            if (previous != _appIcon) previous?.Dispose();
+            if (_card.Visible) _card.ShowNear(_hoverPoint, _devices);
         }
         finally
         {
@@ -65,39 +77,39 @@ sealed class TrayApp : ApplicationContext
         }
     }
 
-    void Show(IReadOnlyList<BatteryReading> readings)
+    void ShowCard()
     {
-        foreach (var reading in readings)
-        {
-            if (!_icons.TryGetValue(reading.Id, out var icon)) _icons[reading.Id] = icon = new DeviceIcon(_menu);
-            icon.Update(reading);
-        }
+        if (_menu.Visible) return;
+        _hoverPoint = Cursor.Position;
+        _card.ShowNear(_hoverPoint, _devices);
+        _hoverTimer.Start();
+    }
 
-        var answered = readings.Select(r => r.Id).ToHashSet();
-        foreach (var (id, icon) in _icons.Where(i => !answered.Contains(i.Key)).ToList())
-        {
-            var unseenFor = DateTime.Now - icon.LastSeen;
-            if (unseenFor > ForgetAfter)
-            {
-                icon.Dispose();
-                _icons.Remove(id);
-            }
-            else if (unseenFor > DimAfter)
-            {
-                icon.MarkUnreachable();
-            }
-        }
+    void HideCardIfPointerLeft()
+    {
+        // The icon's exact bounds aren't available, so "left" means moved further than an icon's width.
+        var pointer = Cursor.Position;
+        var reach = SystemInformation.SmallIconSize.Width;
+        if (_card.Bounds.Contains(pointer) || Math.Abs(pointer.X - _hoverPoint.X) <= reach && Math.Abs(pointer.Y - _hoverPoint.Y) <= reach) return;
+        HideCard();
+    }
 
-        _placeholder.Visible = _icons.Count == 0;
+    void HideCard()
+    {
+        _hoverTimer.Stop();
+        _card.Hide();
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            _timer.Dispose();
-            foreach (var icon in _icons.Values) icon.Dispose();
-            _placeholder.Dispose();
+            _pollTimer.Dispose();
+            _hoverTimer.Dispose();
+            _card.Dispose();
+            if (_notifyIcon.Icon != _appIcon) _notifyIcon.Icon?.Dispose();
+            _notifyIcon.Dispose();
+            _appIcon.Dispose();
             _menu.Dispose();
         }
         base.Dispose(disposing);
