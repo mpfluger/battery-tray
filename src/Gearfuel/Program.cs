@@ -1,7 +1,7 @@
-using BatteryTray.Devices;
+using Gearfuel.Devices;
 using Velopack;
 
-namespace BatteryTray;
+namespace Gearfuel;
 
 static class Program
 {
@@ -14,7 +14,7 @@ static class Program
             .OnBeforeUninstallFastCallback(_ => StartWithWindows.Enabled = false)
             .Run();
 
-        using var mutex = new Mutex(initiallyOwned: true, "BatteryTray.SingleInstance", out var isFirstInstance);
+        using var mutex = new Mutex(initiallyOwned: true, "Gearfuel.SingleInstance", out var isFirstInstance);
         if (!isFirstInstance) return;
 
         ApplicationConfiguration.Initialize();

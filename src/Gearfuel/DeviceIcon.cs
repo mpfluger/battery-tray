@@ -1,6 +1,6 @@
-using BatteryTray.Devices;
+using Gearfuel.Devices;
 
-namespace BatteryTray;
+namespace Gearfuel;
 
 /// <summary>A tray icon showing one device's battery percentage.</summary>
 sealed class DeviceIcon(ContextMenuStrip menu) : IDisposable

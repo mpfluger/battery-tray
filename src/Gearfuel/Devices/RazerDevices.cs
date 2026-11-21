@@ -1,6 +1,6 @@
 using Microsoft.Win32.SafeHandles;
 
-namespace BatteryTray.Devices;
+namespace Gearfuel.Devices;
 
 /// <summary>
 /// Razer wireless devices (directly or through a receiver), queried with Razer's 90-byte

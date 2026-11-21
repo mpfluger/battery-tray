@@ -1,7 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
 
-namespace BatteryTray.Tests;
+namespace Gearfuel.Tests;
 
 /// <summary>A HID++ 2.0 device as a fake receiver presents it.</summary>
 /// <param name="BatteryFeature">0x1004 (Unified Battery), 0x1000 (Battery Status) or 0x1001 (voltage only).</param>

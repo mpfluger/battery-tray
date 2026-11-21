@@ -1,12 +1,12 @@
 using Microsoft.Win32;
 
-namespace BatteryTray;
+namespace Gearfuel;
 
 /// <summary>The current user's "run at sign-in" entry for this executable.</summary>
 static class StartWithWindows
 {
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    const string ValueName = "BatteryTray";
+    const string ValueName = "Gearfuel";
 
     public static bool Enabled
     {

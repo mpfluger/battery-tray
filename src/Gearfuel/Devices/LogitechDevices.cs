@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace BatteryTray.Devices;
+namespace Gearfuel.Devices;
 
 /// <summary>
 /// Logitech devices that speak HID++ 2.0 (documented by Logitech and the Solaar project):

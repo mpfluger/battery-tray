@@ -1,6 +1,6 @@
-using BatteryTray.Devices;
+using Gearfuel.Devices;
 
-namespace BatteryTray.Tests;
+namespace Gearfuel.Tests;
 
 public class PlayStationControllersTests
 {

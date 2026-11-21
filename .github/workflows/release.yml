@@ -29,21 +29,22 @@ jobs:
         run: dotnet test -c Release
 
       - name: Publish
-        run: dotnet publish src/BatteryTray -c Release -r win-x64 --self-contained false -p:Version=$env:VERSION -o publish
+        run: dotnet publish src/Gearfuel -c Release -r win-x64 --self-contained false -p:Version=$env:VERSION -o publish
 
       - name: Package
         run: |
           dotnet tool restore
           # The previous release lets Velopack build a small delta update.
           dotnet vpk download github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir Releases
-          dotnet vpk pack --packId BatteryTray --packVersion $env:VERSION --packDir publish --mainExe BatteryTray.exe `
-            --packTitle BatteryTray --packAuthors "Mark Pfluger" --icon src/BatteryTray/BatteryTray.ico `
+          Get-ChildItem Releases -Exclude 'Gearfuel-*' | Remove-Item # releases before v1.1.0 were named BatteryTray
+          dotnet vpk pack --packId Gearfuel --packVersion $env:VERSION --runtime win-x64 --packDir publish --mainExe Gearfuel.exe `
+            --packTitle Gearfuel --packAuthors "Mark Pfluger" --icon src/Gearfuel/Gearfuel.ico `
             --framework net10.0-x64-desktop --shortcuts StartMenuRoot --outputDir Releases
 
       - name: Create GitHub release
         run: |
           dotnet vpk upload github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir Releases `
-            --tag $env:GITHUB_REF_NAME --releaseName "BatteryTray $env:VERSION" --publish
+            --tag $env:GITHUB_REF_NAME --releaseName "Gearfuel $env:VERSION" --publish
           # Changes go straight to main rather than through pull requests, so the notes list commit subjects.
           $previous = git describe --tags --abbrev=0 "$env:GITHUB_REF_NAME^" 2>$null
           $range = if ($previous) { "$previous..$env:GITHUB_REF_NAME" } else { $env:GITHUB_REF_NAME }

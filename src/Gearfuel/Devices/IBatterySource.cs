@@ -1,4 +1,4 @@
-namespace BatteryTray.Devices;
+namespace Gearfuel.Devices;
 
 /// <param name="Id">Stable for as long as the device stays connected.</param>
 record BatteryReading(string Id, string Name, int Percent, bool Charging);

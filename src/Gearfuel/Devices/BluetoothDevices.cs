@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace BatteryTray.Devices;
+namespace Gearfuel.Devices;
 
 /// <summary>
 /// Connected Bluetooth devices whose battery level Windows tracks itself: the ones

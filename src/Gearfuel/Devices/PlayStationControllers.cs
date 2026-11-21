@@ -1,4 +1,4 @@
-namespace BatteryTray.Devices;
+namespace Gearfuel.Devices;
 
 /// <summary>
 /// DualShock 4 and DualSense controllers over USB or Bluetooth, read from their input reports

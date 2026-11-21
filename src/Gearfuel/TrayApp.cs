@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using BatteryTray.Devices;
+using Gearfuel.Devices;
 
-namespace BatteryTray;
+namespace Gearfuel;
 
 /// <summary>Polls the battery sources and keeps one tray icon per device in sync.</summary>
 sealed class TrayApp : ApplicationContext
@@ -25,12 +25,12 @@ sealed class TrayApp : ApplicationContext
         _sources = sources;
         var startWithWindows = new ToolStripMenuItem("Start with Windows") { Checked = StartWithWindows.Enabled, CheckOnClick = true };
         startWithWindows.CheckedChanged += (_, _) => StartWithWindows.Enabled = startWithWindows.Checked;
-        _menu.Items.Add($"BatteryTray {AppInfo.Version}", null, (_, _) => Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true }));
+        _menu.Items.Add($"Gearfuel {AppInfo.Version}", null, (_, _) => Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true }));
         _menu.Items.Add("Refresh", null, async (_, _) => await RefreshAsync());
         _menu.Items.Add(startWithWindows);
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("Exit", null, (_, _) => ExitThread());
-        _placeholder = new NotifyIcon { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath), Text = "BatteryTray: no devices found", ContextMenuStrip = _menu };
+        _placeholder = new NotifyIcon { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath), Text = "Gearfuel: no devices found", ContextMenuStrip = _menu };
         _timer.Tick += async (_, _) => await RefreshAsync();
         _timer.Start();
         _ = RefreshAsync();

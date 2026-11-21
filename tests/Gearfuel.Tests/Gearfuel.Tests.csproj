@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
-    <ProjectReference Include="..\..\src\BatteryTray\BatteryTray.csproj" />
+    <ProjectReference Include="..\..\src\Gearfuel\Gearfuel.csproj" />
   </ItemGroup>
 
 </Project>

@@ -4,14 +4,14 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
-    <ApplicationIcon>BatteryTray.ico</ApplicationIcon>
+    <ApplicationIcon>Gearfuel.ico</ApplicationIcon>
     <!-- Required by the LibraryImport source generator. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Velopack" Version="1.2.161" />
-    <InternalsVisibleTo Include="BatteryTray.Tests" />
+    <InternalsVisibleTo Include="Gearfuel.Tests" />
   </ItemGroup>
 
 </Project>

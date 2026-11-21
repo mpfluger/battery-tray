@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Velopack;
 using Velopack.Sources;
 
-namespace BatteryTray;
+namespace Gearfuel;
 
 /// <summary>Installs new GitHub releases in the background.</summary>
 static class Updater

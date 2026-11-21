@@ -1,7 +1,7 @@
-using BatteryTray.Devices;
-using Battery = BatteryTray.Devices.LogitechDevices.Battery;
+using Gearfuel.Devices;
+using Battery = Gearfuel.Devices.LogitechDevices.Battery;
 
-namespace BatteryTray.Tests;
+namespace Gearfuel.Tests;
 
 public class LogitechDevicesTests
 {

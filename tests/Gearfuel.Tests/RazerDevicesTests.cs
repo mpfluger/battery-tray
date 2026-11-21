@@ -1,6 +1,6 @@
-using BatteryTray.Devices;
+using Gearfuel.Devices;
 
-namespace BatteryTray.Tests;
+namespace Gearfuel.Tests;
 
 /// <remarks>Byte sequences captured from a DeathAdder V3 HyperSpeed receiver.</remarks>
 public class RazerDevicesTests

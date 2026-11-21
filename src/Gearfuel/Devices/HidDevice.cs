@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace BatteryTray.Devices;
+namespace Gearfuel.Devices;
 
 /// <summary>A HID top-level collection, the unit Windows exposes HID devices as.</summary>
 sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, string ProductName, ushort UsagePage, ushort Usage, int InputReportLength, int FeatureReportLength)
