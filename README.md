@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/mpfluger/battery-tray/actions/workflows/ci.yml/badge.svg)](https://github.com/mpfluger/battery-tray/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/mpfluger/battery-tray)](https://github.com/mpfluger/battery-tray/releases/latest)
-[![License: MIT](https://img.shields.io/github/license/mpfluger/battery-tray)](LICENSE)
 
 Battery levels of your wireless mice, keyboards and controllers, right in the Windows taskbar: one icon per device, with its percentage on it.
 
