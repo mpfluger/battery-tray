@@ -36,7 +36,7 @@ jobs:
           dotnet vpk download github --repoUrl $env:REPO_URL --token $env:GH_TOKEN --outputDir Releases
           dotnet vpk pack --packId BatteryTray --packVersion $env:VERSION --packDir publish --mainExe BatteryTray.exe `
             --packTitle BatteryTray --packAuthors "Mark Pfluger" --icon src/BatteryTray/BatteryTray.ico `
-            --framework net10.0-x64-desktop --outputDir Releases
+            --framework net10.0-x64-desktop --shortcuts StartMenuRoot --outputDir Releases
 
       - name: Create GitHub release
         run: |
