@@ -19,7 +19,7 @@ static class Program
         if (!isFirstInstance) return;
 
         ApplicationConfiguration.Initialize();
-        using var app = new TrayApp(new BluetoothDevices(), new RazerDevices(), new LogitechDevices(), new PlayStationControllers());
+        using var app = new TrayApp(new BluetoothDevices(), new RazerDevices(), new LogitechDevices(), new PlayStationControllers(), new XboxControllers(), new Headsets());
         _ = Updater.KeepUpdatedAsync(restart: app.ExitThread);
         Application.Run(app);
     }

@@ -5,7 +5,7 @@ using Microsoft.Win32.SafeHandles;
 namespace Gearfuel.Devices;
 
 /// <summary>A HID top-level collection, the unit Windows exposes HID devices as.</summary>
-sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, string ProductName, ushort UsagePage, ushort Usage, int InputReportLength, int FeatureReportLength)
+sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, string ProductName, ushort UsagePage, ushort Usage, int InputReportLength, int OutputReportLength, int FeatureReportLength)
 {
     /// <summary>The device interface class Windows registers every HID collection under.</summary>
     public static readonly Guid InterfaceClass = new("4D1E55B2-F16F-11CF-88CB-001111000030");
@@ -51,7 +51,7 @@ sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, 
             if (HidP_GetCaps(preparsed, out var caps) != HidpStatusSuccess) return null;
             var name = new char[127]; // the longest string a USB descriptor holds, plus a terminator
             var productName = HidD_GetProductString(handle, name, name.Length * sizeof(char)) ? new string(name).TrimEnd('\0') : "";
-            return new HidDevice(path, attributes.VendorId, attributes.ProductId, productName, caps.UsagePage, caps.Usage, caps.InputReportByteLength, caps.FeatureReportByteLength);
+            return new HidDevice(path, attributes.VendorId, attributes.ProductId, productName, caps.UsagePage, caps.Usage, caps.InputReportByteLength, caps.OutputReportByteLength, caps.FeatureReportByteLength);
         }
         finally
         {

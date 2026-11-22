@@ -31,9 +31,9 @@ static class Diagnostics
             report.AppendLine($"  {d.Name}: {d.Percent}%{(d.Charging ? ", charging" : "")}, last answered {d.SinceSeen.TotalMinutes:0} min ago");
 
         // One line per collection type; Windows lists most devices several times over.
-        report.AppendLine().AppendLine("HID collections (vendor:product usage-page:usage input/feature report length name):");
-        foreach (var hid in hidDevices.DistinctBy(h => (h.VendorId, h.ProductId, h.UsagePage, h.Usage, h.InputReportLength, h.FeatureReportLength)).OrderBy(h => h.VendorId).ThenBy(h => h.ProductId))
-            report.AppendLine($"  {hid.VendorId:X4}:{hid.ProductId:X4} {hid.UsagePage:X4}:{hid.Usage:X4} {hid.InputReportLength}/{hid.FeatureReportLength} {hid.ProductName}");
+        report.AppendLine().AppendLine("HID collections (vendor:product usage-page:usage input/output/feature report length name):");
+        foreach (var hid in hidDevices.DistinctBy(h => (h.VendorId, h.ProductId, h.UsagePage, h.Usage, h.InputReportLength, h.OutputReportLength, h.FeatureReportLength)).OrderBy(h => h.VendorId).ThenBy(h => h.ProductId))
+            report.AppendLine($"  {hid.VendorId:X4}:{hid.ProductId:X4} {hid.UsagePage:X4}:{hid.Usage:X4} {hid.InputReportLength}/{hid.OutputReportLength}/{hid.FeatureReportLength} {hid.ProductName}");
 
         report.AppendLine().AppendLine("Recent problems:");
         lock (Problems)
