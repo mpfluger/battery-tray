@@ -16,6 +16,8 @@ sealed class TrayApp : ApplicationContext
     readonly HoverCard _card = new();
     readonly DeviceWatcher _deviceWatcher = new();
     readonly TrayMenu _menu = new();
+    readonly ChargeReminders _reminders = new();
+    Settings _settings = Settings.Load(Settings.DefaultPath);
     readonly System.Windows.Forms.Timer _pollTimer = new() { Interval = (int)PollInterval.TotalMilliseconds };
     // A device that just arrived may not answer yet; a second look a little later catches it.
     readonly System.Windows.Forms.Timer _followUpTimer = new() { Interval = 3000 };
@@ -30,7 +32,7 @@ sealed class TrayApp : ApplicationContext
     public TrayApp(params IBatterySource[] sources)
     {
         _sources = sources;
-        Theme.RingColor = Settings.Load(Settings.DefaultPath).RingColor;
+        Theme.RingColor = _settings.RingColor;
 
         // No tooltip text: it would cover the card. Shown once the first readings are in, rather than
         // flashing empty rings first.
@@ -77,6 +79,9 @@ sealed class TrayApp : ApplicationContext
             _devices = _tracker.Update(readings.SelectMany(r => r).ToList(), _lastRefresh);
             UpdateIcon();
             if (_card.Visible) _card.ShowNear(_hoverPoint, _devices);
+            // Shown as notifications, which wait while Focus Assist is on, e.g. during a full-screen game.
+            foreach (var reminder in _reminders.Update(_devices))
+                if (_settings.ChargeReminders) _notifyIcon.ShowBalloonTip(0, reminder.Title, reminder.Text, ToolTipIcon.None);
         }
         finally
         {
@@ -138,6 +143,7 @@ sealed class TrayApp : ApplicationContext
             new("Copy diagnostics", () => Clipboard.SetText(Diagnostics.Describe(_devices, HidDevice.All()))),
             TrayMenuItem.Separator,
             new("Ring color", Submenu: [.. Enum.GetValues<RingColor>().Select(color => new TrayMenuItem(Name(color), () => SetRingColor(color), Checked: color == Theme.RingColor))]),
+            new("Charge reminders", () => Save(_settings with { ChargeReminders = !_settings.ChargeReminders }), Checked: _settings.ChargeReminders),
             new("Start with Windows", () => StartWithWindows.Enabled = !StartWithWindows.Enabled, Checked: StartWithWindows.Enabled),
             TrayMenuItem.Separator,
             new("Exit", ExitThread, TrayMenu.ExitIcon),
@@ -156,8 +162,14 @@ sealed class TrayApp : ApplicationContext
     void SetRingColor(RingColor color)
     {
         Theme.RingColor = color;
-        new Settings(color).Save(Settings.DefaultPath);
+        Save(_settings with { RingColor = color });
         UpdateIcon();
+    }
+
+    void Save(Settings settings)
+    {
+        _settings = settings;
+        settings.Save(Settings.DefaultPath);
     }
 
     void ShowCard()

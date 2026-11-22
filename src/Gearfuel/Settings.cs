@@ -6,7 +6,7 @@ namespace Gearfuel;
 enum RingColor { Automatic, Accent, Blue, Purple, Pink, Yellow }
 
 /// <summary>Choices made in the tray menu. Starting with Windows isn't one: it is the registry's Run entry itself.</summary>
-sealed record Settings(RingColor RingColor = RingColor.Automatic)
+sealed record Settings(RingColor RingColor = RingColor.Automatic, bool ChargeReminders = true)
 {
     public static string DefaultPath => Path.Combine(AppInfo.DataDirectory, "settings.json");
 

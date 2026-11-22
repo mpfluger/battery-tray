@@ -12,6 +12,14 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(RingColor.Purple, Settings.Load(_path).RingColor);
     }
 
+    [Fact]
+    public void FileFromAnOlderVersion_KeepsItsChoices_AndGetsDefaultsForNewOnes()
+    {
+        File.WriteAllText(_path, """{"RingColor":"Purple"}""");
+
+        Assert.Equal(new Settings(RingColor.Purple, ChargeReminders: true), Settings.Load(_path));
+    }
+
     [Theory]
     [InlineData(null)] // first start
     [InlineData("""{"RingColor":"Teal"}""")] // a color a later version added, or a typo
