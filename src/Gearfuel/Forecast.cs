@@ -27,8 +27,6 @@ sealed class Forecast(string? path)
     // Enough change for a first, rough pace; estimates sharpen as more points are lost.
     const double MinChange = 2;
     static readonly TimeSpan MinUse = TimeSpan.FromHours(1), MinCharging = TimeSpan.FromMinutes(10);
-    // A device used this long without losing that much drains slowly, which is worth saying instead of "learning".
-    static readonly TimeSpan MinUseForFloor = TimeSpan.FromHours(2);
     static readonly TimeSpan SaveEvery = TimeSpan.FromMinutes(10);
 
     /// <summary>What's known about one device.</summary>
@@ -111,10 +109,9 @@ sealed class Forecast(string? path)
         if (!Reached(device.UseHours, MinUse.TotalHours)) return null;
         if (!Reached(device.Drained, MinChange))
         {
-            // Less than a point per this many hours of use, so the level lasts at least this many times as long.
-            return Reached(device.UseHours, MinUseForFloor.TotalHours)
-                ? new(TimeSpan.FromHours(percent * device.UseHours / Math.Max(device.Drained, 1)), OfUse: true, AtLeast: true)
-                : null;
+            // Too little lost yet for a pace. But a whole point would have shown, so it loses at most about a point
+            // in this many hours of use, and the level lasts at least this many times as long.
+            return new(TimeSpan.FromHours(percent * device.UseHours / Math.Max(device.Drained, 1)), OfUse: true, AtLeast: true);
         }
 
         // Once there's a whole day, the points lost a day cover both how fast it drains and how much it's used.

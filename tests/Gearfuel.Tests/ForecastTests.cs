@@ -37,13 +37,13 @@ public class ForecastTests
     [Fact]
     public void SlowDevice_ShowsAFloor_InsteadOfLearningForever()
     {
-        Use(_forecast, "mouse", Start, TimeSpan.FromMinutes(90), 81, 81);
+        Use(_forecast, "mouse", Start, TimeSpan.FromMinutes(30), 81, 81);
         Assert.Null(_forecast.Estimate("mouse", 81, charging: false));
 
-        Use(_forecast, "mouse", Start.AddMinutes(90), TimeSpan.FromMinutes(30), 81, 81);
+        Use(_forecast, "mouse", Start.AddMinutes(30), TimeSpan.FromMinutes(30), 81, 81);
         var left = _forecast.Estimate("mouse", 81, charging: false);
 
-        AssertAbout(TimeSpan.FromHours(81 * 2), ofUse: true, left); // under a point in two hours: at least 162 hours
+        AssertAbout(TimeSpan.FromHours(81), ofUse: true, left); // under a point in an hour: at least 81 hours
         Assert.True(left!.Value.AtLeast);
     }
 
