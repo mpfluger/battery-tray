@@ -15,7 +15,7 @@ sealed partial class BluetoothDevices : IBatterySource
     static readonly DevPropKey IsConnected = new(new("83DA6326-97A6-4088-9453-A1923F573B29"), 15);
     static readonly DevPropKey FriendlyName = new(new("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 14);
 
-    public Task<IReadOnlyList<BatteryReading>> ReadAsync()
+    public Task<IReadOnlyList<BatteryReading>> ReadAsync(IReadOnlyList<HidDevice> hidDevices)
     {
         var readings = new List<BatteryReading>();
         foreach (var id in Enumerators.SelectMany(PresentDeviceIds))

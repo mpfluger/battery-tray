@@ -18,10 +18,10 @@ sealed class RazerDevices : IBatterySource
     // Each model answers to one transaction id; these cover the known ones, newest models first.
     static readonly byte[] TransactionIds = [0x1F, 0x3F, 0xFF];
 
-    public async Task<IReadOnlyList<BatteryReading>> ReadAsync()
+    public async Task<IReadOnlyList<BatteryReading>> ReadAsync(IReadOnlyList<HidDevice> hidDevices)
     {
         var readings = new List<BatteryReading>();
-        var devices = HidDevice.All().Where(d => d.VendorId == Razer && d.FeatureReportLength == ReportLength);
+        var devices = hidDevices.Where(d => d.VendorId == Razer && d.FeatureReportLength == ReportLength);
         foreach (var device in devices.DistinctBy(d => d.ProductId))
         {
             using var handle = device.OpenForFeatures();

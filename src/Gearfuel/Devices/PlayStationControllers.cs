@@ -19,10 +19,10 @@ sealed class PlayStationControllers : IBatterySource
     const byte CalibrationReport = 0x05;
     static readonly TimeSpan Timeout = TimeSpan.FromSeconds(1);
 
-    public async Task<IReadOnlyList<BatteryReading>> ReadAsync()
+    public async Task<IReadOnlyList<BatteryReading>> ReadAsync(IReadOnlyList<HidDevice> hidDevices)
     {
         var readings = new List<BatteryReading>();
-        foreach (var device in HidDevice.All())
+        foreach (var device in hidDevices)
         {
             if (device.VendorId != Sony || !Models.TryGetValue(device.ProductId, out var model)) continue;
 

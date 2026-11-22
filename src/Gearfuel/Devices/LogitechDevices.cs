@@ -18,19 +18,31 @@ sealed class LogitechDevices : IBatterySource
     const ushort DeviceNameFeature = 0x0005, BatteryStatusFeature = 0x1000, UnifiedBatteryFeature = 0x1004;
     static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(500);
 
+    // Pinging an empty receiver slot costs about 12 ms of CPU in the USB stack, most of a refresh. So only
+    // the slots that answered are asked; all are probed again hourly, or while none is known.
+    static readonly TimeSpan ReprobeAfter = TimeSpan.FromHours(1);
+    readonly Dictionary<string, (byte[] Slots, DateTimeOffset Probed)> _knownSlots = [];
+
     internal sealed record Battery(byte Device, string? Name, int Percent, bool Charging);
 
-    public async Task<IReadOnlyList<BatteryReading>> ReadAsync()
+    public async Task<IReadOnlyList<BatteryReading>> ReadAsync(IReadOnlyList<HidDevice> hidDevices)
     {
         var readings = new List<BatteryReading>();
-        foreach (var hid in HidDevice.All())
+        foreach (var hid in hidDevices)
         {
             // HID++ long reports have their own vendor-defined collection.
             if (hid.VendorId != Logitech || hid.UsagePage != 0xFF00 || hid.Usage != 0x02) continue;
 
+            var now = DateTimeOffset.Now;
+            var receiver = Receivers.Contains(hid.ProductId);
+            var known = _knownSlots.GetValueOrDefault(hid.Path);
+            var probe = receiver && (known.Slots is not { Length: > 0 } || now - known.Probed > ReprobeAfter);
+            byte[] candidates = !receiver ? [DirectDevice] : probe ? ReceiverSlots : known.Slots!;
+
             await using var stream = hid.OpenStream();
-            byte[] candidates = Receivers.Contains(hid.ProductId) ? ReceiverSlots : [DirectDevice];
-            foreach (var battery in await ReadAsync(stream, candidates))
+            var batteries = await ReadAsync(stream, candidates);
+            if (probe) _knownSlots[hid.Path] = (batteries.Select(b => b.Device).ToArray(), now);
+            foreach (var battery in batteries)
                 readings.Add(new($"{hid.Path}#{battery.Device}", battery.Name ?? hid.ProductName, battery.Percent, battery.Charging));
         }
         return readings;
