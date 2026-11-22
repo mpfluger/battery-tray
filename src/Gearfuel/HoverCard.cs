@@ -105,9 +105,13 @@ sealed class HoverCard : Form
         { Unreachable: true } => $"{Duration(device.SinceSeen)} ago",
         { Charging: true, Percent: >= 100 } => "full",
         { TimeLeft: null } => "learning…", // until the forecast has enough history
-        { Charging: true } => $"full in {Duration(device.TimeLeft.Value)}",
-        _ => Duration(device.TimeLeft.Value),
+        { TimeLeft: { OfUse: true } left } => $"~{UseDuration(left.Duration)} use",
+        { TimeLeft: { } left } when device.Charging => $"full in {Duration(left.Duration)}",
+        { TimeLeft: { } left } => Duration(left.Duration),
     };
+
+    // Hours of use read best in hours, even past two days.
+    static string UseDuration(TimeSpan time) => time.TotalHours < 1 ? Duration(time) : $"{(int)time.TotalHours}h";
 
     internal static string Duration(TimeSpan time) => time switch
     {

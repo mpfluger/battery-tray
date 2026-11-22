@@ -6,47 +6,71 @@ public class ForecastTests
     readonly Forecast _forecast = new(path: null);
 
     [Fact]
-    public void Draining_EstimatesTimeLeftFromTheAverageRateSinceTheLastCharge()
+    public void NewDevice_ShowsHoursOfUseLeft_AfterAnHourOfUse()
     {
-        _forecast.Observe("pad", 90, charging: false, Start);
-        _forecast.Observe("pad", 60, charging: false, Start.AddDays(1)); // 30 points a day
+        Use(_forecast, "mouse", Start, TimeSpan.FromMinutes(30), 100, 97);
+        Assert.Null(_forecast.Estimate("mouse", 97, charging: false));
 
-        Assert.Equal(TimeSpan.FromDays(2), _forecast.Estimate("pad", 60, charging: false, Start.AddDays(1)));
+        Use(_forecast, "mouse", Start.AddMinutes(30), TimeSpan.FromMinutes(30), 97, 94); // 6 points an hour
+
+        AssertAbout(TimeSpan.FromHours(94 / 6.0), ofUse: true, _forecast.Estimate("mouse", 94, charging: false));
     }
 
     [Fact]
-    public void Draining_NeedsADayOfHistory_SoOneLongSessionDoesNotLookLikeTheUsualPace()
+    public void AfterADay_ShowsDaysLeft_AtTheUsualDailyUse()
     {
-        _forecast.Observe("pad", 100, charging: false, Start);
+        Use(_forecast, "pad", Start, TimeSpan.FromHours(2), 100, 90);
+        _forecast.Observe("pad", 90, charging: false, Start.AddDays(1)); // switched off until the next day
 
-        Assert.Null(_forecast.Estimate("pad", 70, charging: false, Start.AddHours(3)));
+        AssertAbout(TimeSpan.FromDays(9), ofUse: false, _forecast.Estimate("pad", 90, charging: false)); // 10 points a day
+    }
+
+    [Fact]
+    public void Charging_KeepsWhatWasLearned()
+    {
+        Use(_forecast, "pad", Start, TimeSpan.FromHours(2), 100, 90);
+        Use(_forecast, "pad", Start.AddDays(1), TimeSpan.FromMinutes(30), 90, 100, charging: true);
+        _forecast.Observe("pad", 100, charging: false, Start.AddDays(1).AddMinutes(31));
+
+        AssertAbout(TimeSpan.FromDays(10), ofUse: false, _forecast.Estimate("pad", 100, charging: false));
     }
 
     [Fact]
     public void Charging_EstimatesTimeUntilFull()
     {
-        _forecast.Observe("mouse", 40, charging: true, Start);
+        Use(_forecast, "mouse", Start, TimeSpan.FromMinutes(20), 40, 50, charging: true); // half a point a minute
 
-        Assert.Equal(TimeSpan.FromMinutes(90), _forecast.Estimate("mouse", 55, charging: true, Start.AddMinutes(30)));
+        AssertAbout(TimeSpan.FromMinutes(100), ofUse: false, _forecast.Estimate("mouse", 50, charging: true));
     }
 
     [Fact]
-    public void Charging_StartsTheHistoryOver()
+    public void SleepingDevice_CountsNeitherTheTimeAsleepNorWhatItLost()
     {
-        _forecast.Observe("pad", 90, charging: false, Start);
-        _forecast.Observe("pad", 70, charging: true, Start.AddDays(1));
-        _forecast.Observe("pad", 100, charging: false, Start.AddDays(1).AddHours(2));
+        Use(_forecast, "keys", Start, TimeSpan.FromHours(1), 100, 94);
+        Use(_forecast, "keys", Start.AddHours(9), TimeSpan.FromHours(1), 91, 85); // lost 3 points asleep, or on another PC
 
-        Assert.Null(_forecast.Estimate("pad", 80, charging: false, Start.AddDays(1).AddHours(12)));
+        AssertAbout(TimeSpan.FromHours(85 / 6.0), ofUse: true, _forecast.Estimate("keys", 85, charging: false));
     }
 
     [Fact]
-    public void SmallUpwardWobble_DoesNotStartTheHistoryOver()
+    public void RiseWithoutCharging_MeansChargedElsewhere_AndIsNotCounted()
     {
-        _forecast.Observe("keys", 80, charging: false, Start);
-        _forecast.Observe("keys", 81, charging: false, Start.AddHours(10));
+        var end = Use(_forecast, "pad", Start, TimeSpan.FromHours(1), 100, 94);
+        Use(_forecast, "pad", end.AddMinutes(1), TimeSpan.FromHours(1), 99, 93);
 
-        Assert.Equal(TimeSpan.FromHours(40), _forecast.Estimate("keys", 50, charging: false, Start.AddDays(1)));
+        AssertAbout(TimeSpan.FromHours(93 / 6.0), ofUse: true, _forecast.Estimate("pad", 93, charging: false));
+    }
+
+    [Fact]
+    public void RecentWeeks_CountMost()
+    {
+        // Two weeks of light use, then a week of three times as much.
+        for (var day = 0; day < 21; day++)
+            Use(_forecast, "mouse", Start.AddDays(day), TimeSpan.FromHours(1), 90, day < 14 ? 85 : 75);
+
+        // 15 points a day would leave 6 days; the three weeks' average, 8.3 points a day, nearly 11.
+        var left = _forecast.Estimate("mouse", 90, charging: false)!.Value.Duration;
+        Assert.InRange(left.TotalDays, 6, 8);
     }
 
     [Fact]
@@ -55,13 +79,49 @@ public class ForecastTests
         var path = Path.Combine(Path.GetTempPath(), $"gearfuel-forecast-{Guid.NewGuid()}.json");
         try
         {
-            new Forecast(path).Observe("pad", 90, charging: false, Start);
+            Use(new Forecast(path), "pad", Start, TimeSpan.FromHours(1), 100, 94);
 
-            Assert.Equal(TimeSpan.FromDays(2), new Forecast(path).Estimate("pad", 60, charging: false, Start.AddDays(1)));
+            AssertAbout(TimeSpan.FromHours(94 / 6.0), ofUse: true, new Forecast(path).Estimate("pad", 94, charging: false));
         }
         finally
         {
             File.Delete(path);
         }
+    }
+
+    [Fact]
+    public void HistoryFromBeforeVersion16_StartsOver()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"gearfuel-forecast-{Guid.NewGuid()}.json");
+        try
+        {
+            File.WriteAllText(path, """{"pad":{"Since":"2026-10-01T09:00:00+00:00","Percent":85,"Charging":false}}""");
+            var forecast = new Forecast(path);
+            Use(forecast, "pad", Start, TimeSpan.FromHours(1), 100, 94);
+
+            AssertAbout(TimeSpan.FromHours(94 / 6.0), ofUse: true, forecast.Estimate("pad", 94, charging: false));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    /// <summary>Readings a minute apart, as Gearfuel takes them while a device is in use.</summary>
+    /// <returns>The time of the last reading.</returns>
+    internal static DateTimeOffset Use(Forecast forecast, string id, DateTimeOffset from, TimeSpan duration, int fromPercent, int toPercent, bool charging = false)
+    {
+        var minutes = (int)duration.TotalMinutes;
+        for (var minute = 0; minute <= minutes; minute++)
+            forecast.Observe(id, fromPercent + (toPercent - fromPercent) * minute / minutes, charging, from.AddMinutes(minute));
+        return from.AddMinutes(minutes);
+    }
+
+    // History fades a little even within a test, so estimates are compared to within 2%.
+    static void AssertAbout(TimeSpan expected, bool ofUse, TimeLeft? actual)
+    {
+        Assert.NotNull(actual);
+        Assert.Equal(ofUse, actual.Value.OfUse);
+        Assert.InRange(actual.Value.Duration.TotalMinutes, expected.TotalMinutes * 0.98, expected.TotalMinutes * 1.02);
     }
 }

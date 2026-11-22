@@ -18,7 +18,9 @@ public class DeviceTrackerTests
     [Fact]
     public void Low_MeansWontLastADay_OnceThePaceIsKnown()
     {
-        _tracker.Update([Reading("pad", 90), Reading("mouse", 30)], Start);
+        // Two hours of use, then nothing until the next day.
+        for (var minute = 0; minute <= 120; minute++)
+            _tracker.Update([Reading("pad", 90 - 50 * minute / 120), Reading("mouse", 30 - 12 * minute / 120)], Start.AddMinutes(minute));
         var devices = _tracker.Update([Reading("pad", 40), Reading("mouse", 18)], Start.AddDays(1));
 
         var pad = devices.Single(d => d.Name == "pad"); // 50 points a day: 40% lasts about 19 hours

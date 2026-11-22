@@ -2,9 +2,9 @@ using Gearfuel.Devices;
 
 namespace Gearfuel;
 
-/// <param name="TimeLeft">Until empty, or until full while charging; null while unknown.</param>
+/// <param name="TimeLeft">Null while unknown.</param>
 /// <param name="SinceSeen">Since the device last answered; the other values are from then.</param>
-sealed record DeviceStatus(string Name, int Percent, bool Charging, TimeSpan? TimeLeft, TimeSpan SinceSeen)
+sealed record DeviceStatus(string Name, int Percent, bool Charging, TimeLeft? TimeLeft, TimeSpan SinceSeen)
 {
     const int LowPercent = 20;
     // Devices that stop answering are often just asleep, so their last level stays as is for a while.
@@ -13,7 +13,7 @@ sealed record DeviceStatus(string Name, int Percent, bool Charging, TimeSpan? Ti
     public bool Unreachable => SinceSeen > UnreachableAfter;
 
     /// <summary>Won't last a day at its usual pace, or, until that's known, nearly empty.</summary>
-    public bool Low => !Charging && (TimeLeft is { } left ? left < TimeSpan.FromDays(1) : Percent <= LowPercent);
+    public bool Low => !Charging && (TimeLeft is { OfUse: false } left ? left.Duration < TimeSpan.FromDays(1) : Percent <= LowPercent);
 
     public Tone Tone => Charging ? Tone.Charging : Low ? Tone.Low : Unreachable ? Tone.Unreachable : Tone.Normal;
 }
@@ -47,7 +47,7 @@ sealed class DeviceTracker(Forecast forecast)
         return _devices.Values
             .Select(d => new DeviceStatus(
                 d.Reading.Name, d.Reading.Percent, d.Reading.Charging,
-                forecast.Estimate(d.Reading.Id, d.Reading.Percent, d.Reading.Charging, now),
+                forecast.Estimate(d.Reading.Id, d.Reading.Percent, d.Reading.Charging),
                 now - d.LastSeen))
             .OrderBy(d => d.Charging ? 2 : d.Low ? 0 : 1) // devices that need charging, then the rest, then charging ones
             .ThenBy(d => d.Percent)
