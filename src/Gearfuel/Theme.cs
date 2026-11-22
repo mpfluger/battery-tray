@@ -21,6 +21,13 @@ static class Theme
 
     public static Color Text => IsLight ? Color.FromArgb(0x1A, 0x1A, 0x1A) : Color.White;
     public static Color SecondaryText => IsLight ? Color.FromArgb(0x5F, 0x5F, 0x5F) : Color.FromArgb(0xA6, 0xA6, 0xA6);
-    public static Color Background => IsLight ? Color.FromArgb(0xF9, 0xF9, 0xF9) : Color.FromArgb(0x2C, 0x2C, 0x2C);
+    // Menu and card colors follow the Windows 10 taskbar menu.
+    public static Color Background => IsLight ? Color.FromArgb(0xF2, 0xF2, 0xF2) : Color.FromArgb(0x2B, 0x2B, 0x2B);
+    public static Color Hover => IsLight ? Color.FromArgb(0xDA, 0xDA, 0xDA) : Color.FromArgb(0x41, 0x41, 0x41);
+    public static Color Separator => IsLight ? Color.FromArgb(0xC4, 0xC4, 0xC4) : Color.FromArgb(0x5C, 0x5C, 0x5C);
     public static Color Border => IsLight ? Color.FromArgb(0xCF, 0xCF, 0xCF) : Color.FromArgb(0x48, 0x48, 0x48);
+
+    /// <summary>Windows' icon font: Segoe Fluent Icons on Windows 11, Segoe MDL2 Assets on Windows 10.</summary>
+    public static readonly string IconFont =
+        new System.Drawing.Text.InstalledFontCollection().Families.Any(f => f.Name == "Segoe Fluent Icons") ? "Segoe Fluent Icons" : "Segoe MDL2 Assets";
 }

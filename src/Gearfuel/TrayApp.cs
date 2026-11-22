@@ -16,6 +16,7 @@ sealed class TrayApp : ApplicationContext
     readonly NotifyIcon _notifyIcon;
     readonly HoverCard _card = new();
     readonly DeviceWatcher _deviceWatcher = new();
+    readonly TrayMenu _menu = new();
     readonly System.Windows.Forms.Timer _pollTimer = new() { Interval = (int)PollInterval.TotalMilliseconds };
     // A device that just arrived may not answer yet; a second look a little later catches it.
     readonly System.Windows.Forms.Timer _followUpTimer = new() { Interval = 3000 };
@@ -123,7 +124,7 @@ sealed class TrayApp : ApplicationContext
     {
         HideCard();
         _menuOpen = true;
-        var command = TrayMenu.Show(_deviceWatcher.Handle, Cursor.Position, StartWithWindows.Enabled);
+        var command = _menu.Show(Cursor.Position, StartWithWindows.Enabled);
         _menuOpen = false;
 
         switch (command)
@@ -176,6 +177,7 @@ sealed class TrayApp : ApplicationContext
             SystemEvents.UserPreferenceChanged -= OnAppearanceChanged;
             SystemEvents.DisplaySettingsChanged -= OnAppearanceChanged;
             _deviceWatcher.Dispose();
+            _menu.Dispose();
             _pollTimer.Dispose();
             _followUpTimer.Dispose();
             _hoverTimer.Dispose();

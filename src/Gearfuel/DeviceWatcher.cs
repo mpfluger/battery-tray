@@ -5,7 +5,7 @@ namespace Gearfuel;
 
 /// <summary>
 /// Raises <see cref="Changed"/> when HID devices arrive or leave: plugged in, removed, or
-/// connected over Bluetooth. Its hidden window also serves as the owner of the tray menu.
+/// connected over Bluetooth.
 /// </summary>
 sealed partial class DeviceWatcher : NativeWindow, IDisposable
 {
