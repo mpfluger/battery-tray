@@ -36,6 +36,7 @@ Tested with a Razer DeathAdder V3 HyperSpeed and a Logitech PRO X TKL on their r
 - When a device won't last the day, Gearfuel reminds you to charge it once you pause, e.g. when a controller is switched off, and says when a charging one is full. Windows' Focus Assist can hold them back while you play.
 - Readings refresh every minute, right away when a device is plugged in, removed or connects, after waking or unlocking, and when you hover the icon.
 - Click the icon for *Ring color*, *Charge reminders*, *Start with Windows*, *Copy diagnostics* (what Gearfuel sees, for an issue) and *Exit*. Rings are white or black like other tray icons, or your Windows accent color, blue, purple, pink or yellow. An accent that could be mistaken for red, green or gray falls back to white or black.
+- Screen readers announce every device's level on the icon. With the keyboard, press Win+B, move to the icon with the arrow keys, and press Enter for the menu.
 
 Everything runs locally. The only network access is a daily check for updates on GitHub.
 

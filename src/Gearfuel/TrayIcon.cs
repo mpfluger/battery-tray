@@ -57,7 +57,10 @@ sealed unsafe partial class TrayIcon : NativeWindow, IDisposable
         Add();
     }
 
-    /// <summary>A Windows notification from the icon, held back while Focus Assist is on.</summary>
+    /// <summary>
+    /// A Windows notification from the icon. Focus Assist holds it back like any other; it's also skipped during
+    /// "quiet time", the first hour after someone signs in to a new Windows account.
+    /// </summary>
     public void ShowNotification(string title, string text)
     {
         if (!_shown) return;
