@@ -24,15 +24,15 @@ Windows hides new tray icons in the overflow menu; drag Gearfuel's onto the task
 | Logitech devices with HID++ 2.0 battery reporting (most current mice and keyboards) | LIGHTSPEED, Bolt or Unifying receiver, or cable |
 | Sony DualShock 4, DualSense, DualSense Edge | USB or Bluetooth |
 
-Tested with a Razer DeathAdder V3 HyperSpeed, a Logitech PRO X TKL and a DualShock 4. If your device has a battery but doesn't show up, [open an issue](https://github.com/mpfluger/gearfuel/issues/new?template=device-support.yml).
+Tested with a Razer DeathAdder V3 HyperSpeed and a Logitech PRO X TKL on their receivers, and a DualShock 4 over Bluetooth. The rest follow the same documented protocols but haven't been tried yet. If your device doesn't show up or reads wrong, [open an issue](https://github.com/mpfluger/gearfuel/issues/new?template=device-support.yml) with the report from *Copy diagnostics* in the icon's menu.
 
 ## Usage
 
 - The icon has up to two rings: outside, the device that needs charging soonest; inside, the next one. A full ring is a full battery.
-- **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes; it goes away after an hour. Mice and keyboards that are just asleep keep their color.
-- Hover the icon for every device, with its time left. That shows once a device has been draining for a day, and while charging, as the time until full.
+- **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes, with its last level; it goes away after an hour. Mice and keyboards that are just asleep keep their color.
+- Hover the icon for every device, with its time left: until empty once it has been draining for a day, and until full while charging.
 - Readings refresh every minute, right away when a device is plugged in, removed or connects, after waking or unlocking, and when you hover the icon.
-- Click the icon for *Start with Windows* and *Exit*.
+- Click the icon for *Start with Windows*, *Copy diagnostics* (what Gearfuel sees, for an issue) and *Exit*.
 
 Everything runs locally. The only network access is a daily check for updates on GitHub.
 
