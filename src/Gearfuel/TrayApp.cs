@@ -13,7 +13,7 @@ sealed class TrayApp : ApplicationContext
     readonly IBatterySource[] _sources;
     readonly Forecast _forecast = new(Forecast.DefaultPath);
     readonly DeviceTracker _tracker;
-    readonly NotifyIcon _notifyIcon;
+    readonly TrayIcon _trayIcon = new(RingIcon.Render([]));
     readonly HoverCard _card = new();
     readonly DeviceWatcher _deviceWatcher = new();
     readonly TrayMenu _menu = new();
@@ -36,11 +36,9 @@ sealed class TrayApp : ApplicationContext
         _tracker = new(_forecast);
         Theme.RingColor = _settings.RingColor;
 
-        // No tooltip text: it would cover the card. Shown once the first readings are in, rather than
-        // flashing empty rings first.
-        _notifyIcon = new NotifyIcon { Icon = RingIcon.Render([]) };
-        _notifyIcon.MouseMove += (_, _) => ShowCard();
-        _notifyIcon.MouseUp += (_, e) => { if (e.Button is MouseButtons.Left or MouseButtons.Right) ShowMenu(); };
+        // Shown once the first readings are in, rather than flashing empty rings first.
+        _trayIcon.Hovered += ShowCard;
+        _trayIcon.Activated += ShowMenu;
         _hoverTimer.Tick += (_, _) => HideCardIfPointerLeft();
 
         _deviceWatcher.Changed += (_, _) =>
@@ -81,10 +79,11 @@ sealed class TrayApp : ApplicationContext
             _lastRefresh = DateTimeOffset.Now;
             _devices = _tracker.Update(readings.SelectMany(r => r).ToList(), _lastRefresh);
             UpdateIcon();
+            _trayIcon.Text = Summary(_devices);
             if (_card.Visible) _card.ShowNear(_hoverPoint, _devices);
             // Shown as notifications, which wait while Focus Assist is on, e.g. during a full-screen game.
             foreach (var reminder in _reminders.Update(_devices))
-                if (_settings.ChargeReminders) _notifyIcon.ShowBalloonTip(0, reminder.Title, reminder.Text, ToolTipIcon.None);
+                if (_settings.ChargeReminders) _trayIcon.ShowNotification(reminder.Title, reminder.Text);
         }
         catch (Exception e)
         {
@@ -94,7 +93,7 @@ sealed class TrayApp : ApplicationContext
         finally
         {
             _refreshing = false;
-            _notifyIcon.Visible = true;
+            _trayIcon.Show();
         }
         if (_refreshAgain)
         {
@@ -119,10 +118,16 @@ sealed class TrayApp : ApplicationContext
 
     void UpdateIcon()
     {
-        var previous = _notifyIcon.Icon;
-        _notifyIcon.Icon = RingIcon.Render(_devices);
-        previous?.Dispose();
+        var previous = _trayIcon.Icon;
+        _trayIcon.Icon = RingIcon.Render(_devices);
+        previous.Dispose();
     }
+
+    /// <summary>What screen readers say for the icon, e.g. "Gearfuel: DualShock 4 18%, low; Arctis Nova 7 60%, charging".</summary>
+    internal static string Summary(IReadOnlyList<DeviceStatus> devices) =>
+        devices.Count == 0
+            ? "Gearfuel: no devices with a battery found"
+            : "Gearfuel: " + string.Join("; ", devices.Select(d => $"{d.Name} {d.Percent}%{(d.Charging ? ", charging" : d.Low ? ", low" : "")}"));
 
     void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
     {
@@ -143,8 +148,8 @@ sealed class TrayApp : ApplicationContext
     void ShowMenu()
     {
         // Clicking the icon while the menu is open closes the menu, and Windows then passes that same click
-        // on to the icon; it must not reopen the menu.
-        if (Environment.TickCount64 - _menuClosedAt < 300) return;
+        // on to the icon; it must not reopen the menu. Enter can also arrive twice while the menu opens.
+        if (_menuOpen || Environment.TickCount64 - _menuClosedAt < 300) return;
 
         HideCard();
         _menuOpen = true;
@@ -237,8 +242,8 @@ sealed class TrayApp : ApplicationContext
             _followUpTimer.Dispose();
             _hoverTimer.Dispose();
             _card.Dispose();
-            _notifyIcon.Icon?.Dispose();
-            _notifyIcon.Dispose();
+            _trayIcon.Icon.Dispose();
+            _trayIcon.Dispose();
         }
         base.Dispose(disposing);
     }
