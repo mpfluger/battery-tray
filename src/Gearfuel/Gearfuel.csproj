@@ -5,11 +5,14 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>Gearfuel.ico</ApplicationIcon>
-    <!-- Required by the LibraryImport source generator. -->
+    <!-- Required by the LibraryImport source generator, and for reading the menu's native messages. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- The version comes from the latest v* git tag; untagged builds get a pre-release version after it. -->
+    <MinVerTagPrefix>v</MinVerTagPrefix>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MinVer" Version="8.0.0" PrivateAssets="all" />
     <PackageReference Include="Velopack" Version="1.2.161" />
     <InternalsVisibleTo Include="Gearfuel.Tests" />
   </ItemGroup>
