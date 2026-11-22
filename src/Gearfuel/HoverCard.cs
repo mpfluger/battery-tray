@@ -102,8 +102,9 @@ sealed class HoverCard : Form
 
     static string TimeText(DeviceStatus device) => device switch
     {
-        { Unreachable: true } => "asleep",
-        { TimeLeft: null } => "",
+        { Unreachable: true } => $"{Duration(device.SinceSeen)} ago",
+        { Charging: true, Percent: >= 100 } => "full",
+        { TimeLeft: null } => "learning…", // until the forecast has enough history
         { Charging: true } => $"full in {Duration(device.TimeLeft.Value)}",
         _ => Duration(device.TimeLeft.Value),
     };

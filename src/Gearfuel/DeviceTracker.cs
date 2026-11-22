@@ -3,10 +3,14 @@ using Gearfuel.Devices;
 namespace Gearfuel;
 
 /// <param name="TimeLeft">Until empty, or until full while charging; null while unknown.</param>
-/// <param name="Unreachable">The device hasn't answered for a while; the other values are its last known ones.</param>
-sealed record DeviceStatus(string Name, int Percent, bool Charging, TimeSpan? TimeLeft, bool Unreachable)
+/// <param name="SinceSeen">Since the device last answered; the other values are from then.</param>
+sealed record DeviceStatus(string Name, int Percent, bool Charging, TimeSpan? TimeLeft, TimeSpan SinceSeen)
 {
     const int LowPercent = 20;
+    // Devices that stop answering are often just asleep, so their last level stays as is for a while.
+    static readonly TimeSpan UnreachableAfter = TimeSpan.FromMinutes(15);
+
+    public bool Unreachable => SinceSeen > UnreachableAfter;
 
     /// <summary>Won't last a day at its usual pace, or, until that's known, nearly empty.</summary>
     public bool Low => !Charging && (TimeLeft is { } left ? left < TimeSpan.FromDays(1) : Percent <= LowPercent);
@@ -17,9 +21,7 @@ sealed record DeviceStatus(string Name, int Percent, bool Charging, TimeSpan? Ti
 /// <summary>Keeps the last known state of recently seen devices, most urgent first.</summary>
 sealed class DeviceTracker(Forecast forecast)
 {
-    // Devices that stop answering are often just asleep, so their last level stays as is for a while,
-    // then shows as unreachable, then goes away.
-    static readonly TimeSpan UnreachableAfter = TimeSpan.FromMinutes(15);
+    // Devices that stop answering show as unreachable for a while, then go away.
     static readonly TimeSpan ForgetAfter = TimeSpan.FromHours(1);
 
     readonly Dictionary<string, (BatteryReading Reading, DateTimeOffset LastSeen)> _devices = [];
@@ -46,7 +48,7 @@ sealed class DeviceTracker(Forecast forecast)
             .Select(d => new DeviceStatus(
                 d.Reading.Name, d.Reading.Percent, d.Reading.Charging,
                 forecast.Estimate(d.Reading.Id, d.Reading.Percent, d.Reading.Charging, now),
-                Unreachable: now - d.LastSeen > UnreachableAfter))
+                now - d.LastSeen))
             .OrderBy(d => d.Charging ? 2 : d.Low ? 0 : 1) // devices that need charging, then the rest, then charging ones
             .ThenBy(d => d.Percent)
             .ToList();
