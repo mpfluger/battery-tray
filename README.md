@@ -32,7 +32,7 @@ Tested with a Razer DeathAdder V3 HyperSpeed and a Logitech PRO X TKL on their r
 - **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes, with its last level; it goes away after an hour. Mice and keyboards that are just asleep keep their color.
 - Hover the icon for every device, with its time left: until empty once it has been draining for a day, and until full while charging.
 - Readings refresh every minute, right away when a device is plugged in, removed or connects, after waking or unlocking, and when you hover the icon.
-- Click the icon for *Start with Windows*, *Copy diagnostics* (what Gearfuel sees, for an issue) and *Exit*.
+- Click the icon for *Ring color*, *Start with Windows*, *Copy diagnostics* (what Gearfuel sees, for an issue) and *Exit*. Rings are white or black like other tray icons, or your Windows accent color, purple or yellow. An accent that could be mistaken for red, green or gray falls back to white or black.
 
 Everything runs locally. The only network access is a daily check for updates on GitHub.
 

@@ -8,8 +8,7 @@ namespace Gearfuel;
 /// </summary>
 sealed class Forecast(string? path)
 {
-    public static string DefaultPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Gearfuel", "forecast.json");
+    public static string DefaultPath => Path.Combine(AppInfo.DataDirectory, "forecast.json");
 
     // Readings wobble by a point or two; larger moves against the trend mean the device was charged, or unplugged.
     const int Jitter = 2;
