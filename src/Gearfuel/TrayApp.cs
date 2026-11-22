@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using Gearfuel.Devices;
 using Microsoft.Win32;
 
@@ -14,31 +13,40 @@ sealed class TrayApp : ApplicationContext
     readonly IBatterySource[] _sources;
     readonly DeviceTracker _tracker = new(new Forecast(Forecast.DefaultPath));
     readonly Icon _appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)!;
-    readonly TrayMenu _menu;
     readonly NotifyIcon _notifyIcon;
     readonly HoverCard _card = new();
     readonly DeviceWatcher _deviceWatcher = new();
     readonly System.Windows.Forms.Timer _pollTimer = new() { Interval = (int)PollInterval.TotalMilliseconds };
+    // A device that just arrived may not answer yet; a second look a little later catches it.
+    readonly System.Windows.Forms.Timer _followUpTimer = new() { Interval = 3000 };
     // Windows reports the pointer moving over a tray icon, but not leaving it, so the card checks for that itself.
     readonly System.Windows.Forms.Timer _hoverTimer = new() { Interval = 100 };
     IReadOnlyList<DeviceStatus> _devices = [];
     DateTimeOffset _lastRefresh;
     Point _hoverPoint;
-    bool _refreshing, _refreshAgain;
+    bool _refreshing, _refreshAgain, _menuOpen;
 
     public TrayApp(params IBatterySource[] sources)
     {
         _sources = sources;
-        _menu = new TrayMenu(_appIcon, refresh: () => _ = RefreshAsync(), quit: ExitThread);
-        _menu.Opening += (_, _) => HideCard();
 
         // No tooltip text: it would cover the card.
-        _notifyIcon = new NotifyIcon { Icon = _appIcon, ContextMenuStrip = _menu, Visible = true };
+        _notifyIcon = new NotifyIcon { Icon = _appIcon, Visible = true };
         _notifyIcon.MouseMove += (_, _) => ShowCard();
-        _notifyIcon.MouseUp += (_, e) => { if (e.Button == MouseButtons.Left) ShowMenu(); };
+        _notifyIcon.MouseUp += (_, e) => { if (e.Button is MouseButtons.Left or MouseButtons.Right) ShowMenu(); };
         _hoverTimer.Tick += (_, _) => HideCardIfPointerLeft();
 
-        _deviceWatcher.Changed += (_, _) => _ = RefreshAsync();
+        _deviceWatcher.Changed += (_, _) =>
+        {
+            _ = RefreshAsync();
+            _followUpTimer.Stop();
+            _followUpTimer.Start();
+        };
+        _followUpTimer.Tick += (_, _) =>
+        {
+            _followUpTimer.Stop();
+            _ = RefreshAsync();
+        };
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.SessionSwitch += OnSessionSwitch;
         SystemEvents.UserPreferenceChanged += OnAppearanceChanged;
@@ -111,14 +119,33 @@ sealed class TrayApp : ApplicationContext
     // Theme, accent color or display scaling changed: redraw with the new colors and icon size.
     void OnAppearanceChanged(object? sender, EventArgs e) => UpdateIcon();
 
-    // NotifyIcon opens its menu only on right-click; this is the same internal call, which also
-    // places the menu next to the taskbar and closes it when clicking elsewhere.
-    void ShowMenu() =>
-        typeof(NotifyIcon).GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(_notifyIcon, null);
+    void ShowMenu()
+    {
+        HideCard();
+        _menuOpen = true;
+        var command = TrayMenu.Show(_deviceWatcher.Handle, Cursor.Position, StartWithWindows.Enabled);
+        _menuOpen = false;
+
+        switch (command)
+        {
+            case TrayMenu.Command.Repository:
+                Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true });
+                break;
+            case TrayMenu.Command.Refresh:
+                _ = RefreshAsync();
+                break;
+            case TrayMenu.Command.StartWithWindows:
+                StartWithWindows.Enabled = !StartWithWindows.Enabled;
+                break;
+            case TrayMenu.Command.Exit:
+                ExitThread();
+                break;
+        }
+    }
 
     void ShowCard()
     {
-        if (_menu.Visible) return;
+        if (_menuOpen) return;
         _hoverPoint = Cursor.Position;
         if (!_card.Visible && DateTimeOffset.Now - _lastRefresh > HoverRefreshAfter) _ = RefreshAsync();
         _card.ShowNear(_hoverPoint, _devices);
@@ -150,12 +177,12 @@ sealed class TrayApp : ApplicationContext
             SystemEvents.DisplaySettingsChanged -= OnAppearanceChanged;
             _deviceWatcher.Dispose();
             _pollTimer.Dispose();
+            _followUpTimer.Dispose();
             _hoverTimer.Dispose();
             _card.Dispose();
             if (_notifyIcon.Icon != _appIcon) _notifyIcon.Icon?.Dispose();
             _notifyIcon.Dispose();
             _appIcon.Dispose();
-            _menu.Dispose();
         }
         base.Dispose(disposing);
     }

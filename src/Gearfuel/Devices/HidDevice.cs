@@ -7,6 +7,9 @@ namespace Gearfuel.Devices;
 /// <summary>A HID top-level collection, the unit Windows exposes HID devices as.</summary>
 sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, string ProductName, ushort UsagePage, ushort Usage, int InputReportLength, int FeatureReportLength)
 {
+    /// <summary>The device interface class Windows registers every HID collection under.</summary>
+    public static readonly Guid InterfaceClass = new("4D1E55B2-F16F-11CF-88CB-001111000030");
+
     public static IReadOnlyList<HidDevice> All() =>
         InterfacePaths().Select(TryDescribe).OfType<HidDevice>().ToList();
 
@@ -24,7 +27,7 @@ sealed partial record HidDevice(string Path, ushort VendorId, ushort ProductId, 
 
     static string[] InterfacePaths()
     {
-        var hidInterface = new Guid("4D1E55B2-F16F-11CF-88CB-001111000030");
+        var hidInterface = InterfaceClass;
         while (true)
         {
             CM_Get_Device_Interface_List_SizeW(out var length, ref hidInterface, null, 0);
