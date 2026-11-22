@@ -33,8 +33,9 @@ sealed class TrayApp : ApplicationContext
         _sources = sources;
         Theme.RingColor = Settings.Load(Settings.DefaultPath).RingColor;
 
-        // No tooltip text: it would cover the card.
-        _notifyIcon = new NotifyIcon { Icon = _appIcon, Visible = true };
+        // No tooltip text: it would cover the card. Shown once the first readings are in, rather than
+        // flashing the app icon first.
+        _notifyIcon = new NotifyIcon { Icon = _appIcon };
         _notifyIcon.MouseMove += (_, _) => ShowCard();
         _notifyIcon.MouseUp += (_, e) => { if (e.Button is MouseButtons.Left or MouseButtons.Right) ShowMenu(); };
         _hoverTimer.Tick += (_, _) => HideCardIfPointerLeft();
@@ -81,6 +82,7 @@ sealed class TrayApp : ApplicationContext
         finally
         {
             _refreshing = false;
+            _notifyIcon.Visible = true;
         }
         if (_refreshAgain)
         {
