@@ -22,7 +22,7 @@ sealed class RazerDevices : IBatterySource
     {
         var readings = new List<BatteryReading>();
         var devices = hidDevices.Where(d => d.VendorId == Razer && d.FeatureReportLength == ReportLength);
-        foreach (var device in devices.DistinctBy(d => d.ProductId))
+        foreach (var device in devices)
         {
             using var handle = device.OpenForFeatures();
             foreach (var transactionId in TransactionIds)
@@ -37,7 +37,8 @@ sealed class RazerDevices : IBatterySource
                 break;
             }
         }
-        return readings;
+        // Some devices answer on more than one collection; the serial tells those apart from two of the same model.
+        return readings.DistinctBy(r => r.Id).ToList();
     }
 
     static async Task<byte[]?> QueryAsync(SafeFileHandle handle, byte transactionId, byte commandClass, byte command, byte argumentCount)
