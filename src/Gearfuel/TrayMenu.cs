@@ -14,7 +14,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
 
     // Measured from the Windows 10 taskbar menu, in pixels at 100% scaling.
     const int RowHeight = 32, SeparatorHeight = 9, TextIndent = 28, IconColumn = 32, RightPadding = 24, TopPadding = 4, BottomPadding = 8, MinWidth = 180;
-    const char CheckGlyph = '', ExitGlyph = '';
+    const char CheckGlyph = (char)0xE73E, ExitGlyph = (char)0xE711; // Segoe icon font: CheckMark, Cancel
 
     // Windows 11 draws native menus in its own modern style already; owner-drawn rows would look out of place there.
     static readonly bool DrawsItems = Environment.OSVersion.Version.Build < 22000;
