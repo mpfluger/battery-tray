@@ -123,6 +123,8 @@ sealed partial class HoverCard : Form
         { Unreachable: true } => $"{TimeText.Short(device.SinceSeen)} ago",
         { Charging: true, Percent: >= 100 } => "full",
         { TimeLeft: null } => "learning…", // until the forecast has enough history
+        // A floor only says "plenty" beyond a point, and stays short that way.
+        { TimeLeft: { AtLeast: true } left } => $"{TimeText.Hours(TimeSpan.FromHours(Math.Min(left.Duration.TotalHours, 100)))}+ use",
         { TimeLeft: { OfUse: true } left } => $"~{TimeText.Hours(left.Duration)} use",
         { TimeLeft: { } left } when device.Charging => $"full in {TimeText.Short(left.Duration)}",
         { TimeLeft: { } left } => TimeText.Short(left.Duration),

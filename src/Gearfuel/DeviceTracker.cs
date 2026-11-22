@@ -40,7 +40,7 @@ sealed class DeviceTracker(Forecast forecast)
                     _devices.Remove(moved);
             }
             _devices[reading.Id] = (reading, now);
-            forecast.Observe(reading.Id, reading.Percent, reading.Charging, now);
+            forecast.Observe(reading.Id, reading.Level, reading.Charging, now);
         }
         foreach (var id in _devices.Where(d => now - d.Value.LastSeen > ForgetAfter).Select(d => d.Key).ToList())
             _devices.Remove(id);
@@ -48,7 +48,7 @@ sealed class DeviceTracker(Forecast forecast)
         return _devices.Values
             .Select(d => new DeviceStatus(
                 d.Reading.Id, d.Reading.Name, d.Reading.Percent, d.Reading.Charging,
-                forecast.Estimate(d.Reading.Id, d.Reading.Percent, d.Reading.Charging),
+                forecast.Estimate(d.Reading.Id, d.Reading.Level, d.Reading.Charging),
                 now - d.LastSeen))
             .OrderBy(d => d.Charging ? 2 : d.Low ? 0 : 1) // devices that need charging, then the rest, then charging ones
             .ThenBy(d => d.Percent)

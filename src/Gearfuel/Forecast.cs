@@ -4,7 +4,8 @@ namespace Gearfuel;
 
 /// <param name="Duration">Until empty, or until full while charging.</param>
 /// <param name="OfUse">Counts hours of use rather than calendar time, as how much the device is used a day isn't known yet.</param>
-readonly record struct TimeLeft(TimeSpan Duration, bool OfUse);
+/// <param name="AtLeast">A floor: the device has barely drained yet, so it lasts at least this long.</param>
+readonly record struct TimeLeft(TimeSpan Duration, bool OfUse, bool AtLeast = false);
 
 /// <summary>
 /// Estimates how long each device's battery lasts, from two things it learns per device: how fast the level drops
@@ -23,9 +24,11 @@ sealed class Forecast(string? path)
     const int DaysKept = 14;
     // Readings wobble by a point or two; a bigger rise without charging means the device was charged elsewhere.
     const int Jitter = 2;
-    // Enough change that a level reported in whole percent (or in steps of 10, for PlayStation controllers) gives a usable pace.
-    const double MinChange = 5;
-    static readonly TimeSpan MinUse = TimeSpan.FromMinutes(45), MinCharging = TimeSpan.FromMinutes(10);
+    // Enough change for a first, rough pace; estimates sharpen as more points are lost.
+    const double MinChange = 2;
+    static readonly TimeSpan MinUse = TimeSpan.FromHours(1), MinCharging = TimeSpan.FromMinutes(10);
+    // A device used this long without losing that much drains slowly, which is worth saying instead of "learning".
+    static readonly TimeSpan MinUseForFloor = TimeSpan.FromHours(2);
     static readonly TimeSpan SaveEvery = TimeSpan.FromMinutes(10);
 
     /// <summary>What's known about one device.</summary>
@@ -33,7 +36,7 @@ sealed class Forecast(string? path)
     {
         public DateTimeOffset FirstSeen { get; set; }
         public DateTimeOffset LastSeen { get; set; }
-        public int Percent { get; set; }
+        public double Percent { get; set; }
         public bool Charging { get; set; }
 
         // Points lost and hours in use (not charging), and points gained and hours charging. These sums fade over
@@ -52,7 +55,7 @@ sealed class Forecast(string? path)
     readonly Dictionary<string, History> _devices = Load(path);
     DateTimeOffset _lastSave;
 
-    public void Observe(string id, int percent, bool charging, DateTimeOffset now)
+    public void Observe(string id, double percent, bool charging, DateTimeOffset now)
     {
         if (!_devices.TryGetValue(id, out var device))
         {
@@ -95,17 +98,24 @@ sealed class Forecast(string? path)
     }
 
     /// <returns>Null until there's enough history.</returns>
-    public TimeLeft? Estimate(string id, int percent, bool charging)
+    public TimeLeft? Estimate(string id, double percent, bool charging)
     {
         if (!_devices.TryGetValue(id, out var device)) return null;
 
         if (charging)
         {
-            return device.Charged >= MinChange && device.ChargeHours >= MinCharging.TotalHours
+            return Reached(device.Charged, MinChange) && Reached(device.ChargeHours, MinCharging.TotalHours)
                 ? new(TimeSpan.FromHours((100 - percent) * device.ChargeHours / device.Charged), OfUse: false)
                 : null;
         }
-        if (device.Drained < MinChange || device.UseHours < MinUse.TotalHours) return null;
+        if (!Reached(device.UseHours, MinUse.TotalHours)) return null;
+        if (!Reached(device.Drained, MinChange))
+        {
+            // Less than a point per this many hours of use, so the level lasts at least this many times as long.
+            return Reached(device.UseHours, MinUseForFloor.TotalHours)
+                ? new(TimeSpan.FromHours(percent * device.UseHours / Math.Max(device.Drained, 1)), OfUse: true, AtLeast: true)
+                : null;
+        }
 
         // Once there's a whole day, the points lost a day cover both how fast it drains and how much it's used.
         // Only whole days count, so a day's estimate doesn't swing with when in the day the device is used.
@@ -121,6 +131,9 @@ sealed class Forecast(string? path)
             ? new(TimeSpan.FromDays(percent * weights / drained), OfUse: false)
             : new(TimeSpan.FromHours(percent * device.UseHours / device.Drained), OfUse: true);
     }
+
+    // The sums start fading as soon as they're collected, so an hour of use adds up to a little under an hour.
+    static bool Reached(double sum, double threshold) => sum >= threshold * 0.95;
 
     static Dictionary<string, History> Load(string? path)
     {

@@ -50,6 +50,7 @@ sealed class ChargeReminders
 
     static string Outlook(DeviceStatus device) => device.TimeLeft switch
     {
+        { AtLeast: true } left => $", at least {TimeText.Hours(left.Duration)} of use",
         { OfUse: true } left => $", about {TimeText.Short(left.Duration)} of use",
         { } left => $", about {TimeText.Short(left.Duration)} at your usual pace",
         null => "",

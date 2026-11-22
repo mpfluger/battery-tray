@@ -17,6 +17,37 @@ public class ForecastTests
     }
 
     [Fact]
+    public void FirstEstimate_NeedsOnlyTwoPointsLost()
+    {
+        Use(_forecast, "mouse", Start, TimeSpan.FromHours(1), 100, 98);
+
+        AssertAbout(TimeSpan.FromHours(98 / 2.0), ofUse: true, _forecast.Estimate("mouse", 98, charging: false));
+    }
+
+    [Fact]
+    public void FinerLevels_ShowDropsSmallerThanAPoint()
+    {
+        // Razer reports 255 steps: 0.4 points each.
+        for (var minute = 0; minute <= 60; minute++)
+            _forecast.Observe("mouse", 81 - minute / 12 * 0.4, charging: false, Start.AddMinutes(minute));
+
+        AssertAbout(TimeSpan.FromHours(79 / 2.0), ofUse: true, _forecast.Estimate("mouse", 79, charging: false));
+    }
+
+    [Fact]
+    public void SlowDevice_ShowsAFloor_InsteadOfLearningForever()
+    {
+        Use(_forecast, "mouse", Start, TimeSpan.FromMinutes(90), 81, 81);
+        Assert.Null(_forecast.Estimate("mouse", 81, charging: false));
+
+        Use(_forecast, "mouse", Start.AddMinutes(90), TimeSpan.FromMinutes(30), 81, 81);
+        var left = _forecast.Estimate("mouse", 81, charging: false);
+
+        AssertAbout(TimeSpan.FromHours(81 * 2), ofUse: true, left); // under a point in two hours: at least 162 hours
+        Assert.True(left!.Value.AtLeast);
+    }
+
+    [Fact]
     public void AfterADay_ShowsDaysLeft_AtTheUsualDailyUse()
     {
         Use(_forecast, "pad", Start, TimeSpan.FromHours(2), 100, 90);
