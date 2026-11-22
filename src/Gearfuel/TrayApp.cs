@@ -31,6 +31,7 @@ sealed class TrayApp : ApplicationContext
     public TrayApp(params IBatterySource[] sources)
     {
         _sources = sources;
+        Theme.RingColor = Settings.Load(Settings.DefaultPath).RingColor;
 
         // No tooltip text: it would cover the card.
         _notifyIcon = new NotifyIcon { Icon = _appIcon, Visible = true };
@@ -130,25 +131,32 @@ sealed class TrayApp : ApplicationContext
 
         HideCard();
         _menuOpen = true;
-        var command = _menu.Show(Cursor.Position, StartWithWindows.Enabled);
+        _menu.Show(Cursor.Position,
+        [
+            new($"Gearfuel {AppInfo.Version}", () => Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true })),
+            new("Copy diagnostics", () => Clipboard.SetText(Diagnostics.Describe(_devices, HidDevice.All()))),
+            TrayMenuItem.Separator,
+            new("Ring color", Submenu: [.. Enum.GetValues<RingColor>().Select(color => new TrayMenuItem(Name(color), () => SetRingColor(color), Checked: color == Theme.RingColor))]),
+            new("Start with Windows", () => StartWithWindows.Enabled = !StartWithWindows.Enabled, Checked: StartWithWindows.Enabled),
+            TrayMenuItem.Separator,
+            new("Exit", ExitThread, TrayMenu.ExitIcon),
+        ]);
         _menuOpen = false;
         _menuClosedAt = Environment.TickCount64;
 
-        switch (command)
+        static string Name(RingColor color) => color switch
         {
-            case TrayMenu.Command.Repository:
-                Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true });
-                break;
-            case TrayMenu.Command.CopyDiagnostics:
-                Clipboard.SetText(Diagnostics.Describe(_devices, HidDevice.All()));
-                break;
-            case TrayMenu.Command.StartWithWindows:
-                StartWithWindows.Enabled = !StartWithWindows.Enabled;
-                break;
-            case TrayMenu.Command.Exit:
-                ExitThread();
-                break;
-        }
+            RingColor.Automatic => "Default",
+            RingColor.Accent => "Windows accent color",
+            _ => color.ToString(),
+        };
+    }
+
+    void SetRingColor(RingColor color)
+    {
+        Theme.RingColor = color;
+        new Settings(color).Save(Settings.DefaultPath);
+        UpdateIcon();
     }
 
     void ShowCard()

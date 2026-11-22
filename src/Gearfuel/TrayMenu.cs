@@ -3,79 +3,82 @@ using System.Runtime.InteropServices;
 
 namespace Gearfuel;
 
+/// <param name="Click">Runs after the menu has closed.</param>
+sealed record TrayMenuItem(string Text, Action? Click = null, char? Icon = null, bool Checked = false, IReadOnlyList<TrayMenuItem>? Submenu = null)
+{
+    public static readonly TrayMenuItem Separator = new("");
+
+    public bool IsSeparator => Click is null && Submenu is null;
+}
+
 /// <summary>
 /// The tray icon's menu: a native Windows menu. On Windows 10, Gearfuel draws its items to the measurements and
-/// colors of the taskbar's own menu, as Explorer does. Windows still provides the frame, shadow and
+/// colors of the taskbar's own menu, as Explorer does. Windows still provides the frame, shadow, submenu arrows and
 /// keyboard handling.
 /// </summary>
 sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
 {
-    public enum Command { Repository = 1, CopyDiagnostics, StartWithWindows, Exit }
+    public const char ExitIcon = (char)0xE711; // Segoe icon font: Cancel
+    const char CheckIcon = (char)0xE73E; // CheckMark
 
     // Measured from the Windows 10 taskbar menu, in pixels at 100% scaling.
     const int RowHeight = 32, SeparatorHeight = 9, TextIndent = 28, IconColumn = 32, RightPadding = 24, TopPadding = 4, BottomPadding = 8, MinWidth = 180;
-    const char CheckGlyph = (char)0xE73E, ExitGlyph = (char)0xE711; // Segoe icon font: CheckMark, Cancel
 
     // Windows 11 draws native menus in its own modern style already; owner-drawn rows would look out of place there.
     static readonly bool DrawsItems = Environment.OSVersion.Version.Build < 22000;
 
-    sealed record Item(Command? Command, string Text, char? Icon = null, bool Checked = false)
-    {
-        public bool IsSeparator => Command is null;
-    }
-
-    static readonly Item Separator = new(null, "");
-    IReadOnlyList<Item> _items = [];
+    // Every item of the open menu and its submenus. An item's index here is its item data in measure and draw
+    // messages, and its index + 1 its command id.
+    readonly List<(TrayMenuItem Item, IReadOnlyList<TrayMenuItem> Siblings, int Position)> _entries = [];
+    nint _background;
 
     public TrayMenu() => CreateHandle(new CreateParams());
 
-    /// <returns>The chosen command, or null when the menu was dismissed.</returns>
-    public Command? Show(Point at, bool startWithWindows)
+    public void Show(Point at, IReadOnlyList<TrayMenuItem> items)
     {
-        _items =
-        [
-            new(Command.Repository, $"Gearfuel {AppInfo.Version}"),
-            new(Command.CopyDiagnostics, "Copy diagnostics"),
-            Separator,
-            new(Command.StartWithWindows, "Start with Windows", Checked: startWithWindows),
-            Separator,
-            new(Command.Exit, "Exit", ExitGlyph),
-        ];
-
-        var menu = CreatePopupMenu();
-        var background = CreateSolidBrush(ColorTranslator.ToWin32(Theme.Background));
+        _entries.Clear();
+        _background = CreateSolidBrush(ColorTranslator.ToWin32(Theme.Background));
+        var menu = Build(items);
+        int command;
         try
         {
-            for (var i = 0; i < _items.Count; i++)
-            {
-                var item = _items[i];
-                var id = (nint)(item.Command ?? 0);
-                var flags = (item.IsSeparator ? MfSeparator : 0) | (item.Checked ? MfChecked : 0);
-                if (DrawsItems) AppendMenuW(menu, flags | MfOwnerDraw, id, i); // the index comes back in measure and draw messages
-                else AppendMenuTextW(menu, flags, id, item.IsSeparator ? null : item.Text);
-            }
-            if (DrawsItems)
-            {
-                // Paints the frame's inner padding in the same color as the items.
-                var info = new MenuInfo { Size = sizeof(MenuInfo), Mask = MimBackground, Background = background };
-                SetMenuInfo(menu, ref info);
-            }
-
             MatchTaskbarTheme();
             // Both as the TrackPopupMenu documentation prescribes for notification icons: without them,
             // the menu doesn't close when clicking elsewhere.
             SetForegroundWindow(Handle);
             var screen = Screen.FromPoint(at).Bounds;
             var opensUpward = at.Y > screen.Top + screen.Height / 2;
-            var command = TrackPopupMenuEx(menu, TpmReturnCmd | TpmRightButton | (opensUpward ? TpmBottomAlign : 0), at.X, at.Y, Handle, 0);
+            command = TrackPopupMenuEx(menu, TpmReturnCmd | TpmRightButton | (opensUpward ? TpmBottomAlign : 0), at.X, at.Y, Handle, 0);
             PostMessageW(Handle, WmNull, 0, 0);
-            return command == 0 ? null : (Command)command;
         }
         finally
         {
-            DestroyMenu(menu);
-            DeleteObject(background);
+            DestroyMenu(menu); // and its submenus
+            DeleteObject(_background);
         }
+        if (command > 0) _entries[command - 1].Item.Click?.Invoke();
+    }
+
+    nint Build(IReadOnlyList<TrayMenuItem> items)
+    {
+        var menu = CreatePopupMenu();
+        for (var position = 0; position < items.Count; position++)
+        {
+            var item = items[position];
+            var index = _entries.Count;
+            _entries.Add((item, items, position));
+            var flags = (item.IsSeparator ? MfSeparator : 0) | (item.Checked ? MfChecked : 0) | (item.Submenu is null ? 0 : MfPopup);
+            var id = item.Submenu is { } submenu ? Build(submenu) : index + 1;
+            if (DrawsItems) AppendMenuW(menu, flags | MfOwnerDraw, id, index);
+            else AppendMenuTextW(menu, flags, id, item.IsSeparator ? null : item.Text);
+        }
+        if (DrawsItems)
+        {
+            // Paints the frame's inner padding in the same color as the items.
+            var info = new MenuInfo { Size = sizeof(MenuInfo), Mask = MimBackground, Background = _background };
+            SetMenuInfo(menu, ref info);
+        }
+        return menu;
     }
 
     protected override void WndProc(ref Message m)
@@ -100,25 +103,33 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
 
     Font CreateFont() => new("Segoe UI", 12 * Scale, GraphicsUnit.Pixel); // 9 pt at 100%
 
+    // The first and last rows of each menu carry its top and bottom padding.
+    (int Top, int Bottom) EdgePadding(int index)
+    {
+        var (_, siblings, position) = _entries[index];
+        return (position == 0 ? S(TopPadding) : 0, position == siblings.Count - 1 ? S(BottomPadding) : 0);
+    }
+
     void Measure(MeasureItem* measure)
     {
         var index = (int)measure->ItemData;
-        var item = _items[index];
+        var (item, siblings, _) = _entries[index];
         using var font = CreateFont();
-        var widest = _items.Max(i => TextRenderer.MeasureText(i.Text, font, Size.Empty, TextFormatFlags.NoPrefix).Width);
+        var widest = siblings.Max(i => TextRenderer.MeasureText(i.Text, font, Size.Empty, TextFormatFlags.NoPrefix).Width);
         // Windows adds room for a check mark to every owner-drawn item's width; take it back.
         measure->ItemWidth = (uint)Math.Max(S(MinWidth), S(TextIndent) + widest + S(RightPadding) - GetSystemMetrics(SmCxMenuCheck));
-        measure->ItemHeight = (uint)(S(item.IsSeparator ? SeparatorHeight : RowHeight) + (index == 0 ? S(TopPadding) : 0) + (index == _items.Count - 1 ? S(BottomPadding) : 0));
+        var (top, bottom) = EdgePadding(index);
+        measure->ItemHeight = (uint)(S(item.IsSeparator ? SeparatorHeight : RowHeight) + top + bottom);
     }
 
     void Draw(DrawItem* draw)
     {
         var index = (int)draw->ItemData;
-        var item = _items[index];
+        var item = _entries[index].Item;
         using var g = Graphics.FromHdc(draw->Dc);
         var bounds = Rectangle.FromLTRB(draw->Item.Left, draw->Item.Top, draw->Item.Right, draw->Item.Bottom);
-        // The edge padding of the first and last rows belongs outside them.
-        var row = Rectangle.FromLTRB(bounds.Left, bounds.Top + (index == 0 ? S(TopPadding) : 0), bounds.Right, bounds.Bottom - (index == _items.Count - 1 ? S(BottomPadding) : 0));
+        var (top, bottom) = EdgePadding(index);
+        var row = Rectangle.FromLTRB(bounds.Left, bounds.Top + top, bounds.Right, bounds.Bottom - bottom);
         var selected = (draw->State & OdsSelected) != 0 && !item.IsSeparator;
 
         using (var background = new SolidBrush(Theme.Background)) g.FillRectangle(background, bounds);
@@ -136,7 +147,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
             return;
         }
 
-        if ((item.Checked ? CheckGlyph : item.Icon) is { } glyph) DrawGlyph(g, glyph, new RectangleF(row.Left, row.Top, S(IconColumn), row.Height));
+        if ((item.Checked ? CheckIcon : item.Icon) is { } glyph) DrawGlyph(g, glyph, new RectangleF(row.Left, row.Top, S(IconColumn), row.Height));
 
         using var font = CreateFont();
         var textBounds = Rectangle.FromLTRB(row.Left + S(TextIndent), row.Top, row.Right - S(RightPadding), row.Bottom);
@@ -172,7 +183,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
     public void Dispose() => DestroyHandle();
 
     const int WmMeasureItem = 0x2C, WmDrawItem = 0x2B, WmNull = 0x0;
-    const uint MfChecked = 0x8, MfSeparator = 0x800, MfOwnerDraw = 0x100;
+    const uint MfChecked = 0x8, MfPopup = 0x10, MfSeparator = 0x800, MfOwnerDraw = 0x100;
     const uint TpmRightButton = 0x2, TpmBottomAlign = 0x20, TpmReturnCmd = 0x100;
     const uint MimBackground = 0x2, OdsSelected = 0x1;
     const int SmCxMenuCheck = 71;
