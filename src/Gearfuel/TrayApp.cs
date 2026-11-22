@@ -16,7 +16,6 @@ sealed class TrayApp : ApplicationContext
     readonly NotifyIcon _notifyIcon;
     readonly HoverCard _card = new();
     readonly DeviceWatcher _deviceWatcher = new();
-    readonly SessionState _session = new();
     readonly TrayMenu _menu = new();
     readonly System.Windows.Forms.Timer _pollTimer = new() { Interval = (int)PollInterval.TotalMilliseconds };
     // A device that just arrived may not answer yet; a second look a little later catches it.
@@ -49,16 +48,12 @@ sealed class TrayApp : ApplicationContext
             _followUpTimer.Stop();
             _ = RefreshAsync();
         };
-        _session.ScreenOn += (_, _) => _ = RefreshAsync();
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.SessionSwitch += OnSessionSwitch;
         SystemEvents.UserPreferenceChanged += OnAppearanceChanged;
         SystemEvents.DisplaySettingsChanged += OnAppearanceChanged;
 
-        _pollTimer.Tick += (_, _) =>
-        {
-            if (PollSchedule.ShouldRead(DateTimeOffset.Now, _lastRefresh, SessionState.Locked, _session.ScreenOff)) _ = RefreshAsync();
-        };
+        _pollTimer.Tick += (_, _) => _ = RefreshAsync();
         _pollTimer.Start();
         _ = RefreshAsync();
     }
@@ -115,16 +110,12 @@ sealed class TrayApp : ApplicationContext
 
     void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
     {
-        if (e.Mode != PowerModes.Resume) return;
-        _session.UserIsActive();
-        _ = RefreshAsync();
+        if (e.Mode == PowerModes.Resume) _ = RefreshAsync();
     }
 
     void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
     {
-        if (e.Reason != SessionSwitchReason.SessionUnlock) return;
-        _session.UserIsActive();
-        _ = RefreshAsync();
+        if (e.Reason == SessionSwitchReason.SessionUnlock) _ = RefreshAsync();
     }
 
     // Theme, accent color or display scaling changed: redraw with the new colors and icon size.
@@ -133,7 +124,6 @@ sealed class TrayApp : ApplicationContext
     void ShowMenu()
     {
         HideCard();
-        _session.UserIsActive();
         _menuOpen = true;
         var command = _menu.Show(Cursor.Position, StartWithWindows.Enabled);
         _menuOpen = false;
@@ -155,7 +145,6 @@ sealed class TrayApp : ApplicationContext
     void ShowCard()
     {
         if (_menuOpen) return;
-        _session.UserIsActive();
         _hoverPoint = Cursor.Position;
         if (!_card.Visible && DateTimeOffset.Now - _lastRefresh > HoverRefreshAfter) _ = RefreshAsync();
         _card.ShowNear(_hoverPoint, _devices);
@@ -186,7 +175,6 @@ sealed class TrayApp : ApplicationContext
             SystemEvents.UserPreferenceChanged -= OnAppearanceChanged;
             SystemEvents.DisplaySettingsChanged -= OnAppearanceChanged;
             _deviceWatcher.Dispose();
-            _session.Dispose();
             _menu.Dispose();
             _pollTimer.Dispose();
             _followUpTimer.Dispose();

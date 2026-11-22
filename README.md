@@ -31,7 +31,7 @@ Tested with a Razer DeathAdder V3 HyperSpeed, a Logitech PRO X TKL and a DualSho
 - The icon has up to two rings: outside, the device that needs charging soonest; inside, the next one. A full ring is a full battery.
 - **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes; it goes away after an hour. Mice and keyboards that are just asleep keep their color.
 - Hover the icon for every device, with its time left. That shows once a device has been draining for a day, and while charging, as the time until full.
-- Readings refresh every minute, right away when a device is plugged in, removed or connects, and when you hover the icon. They pause while the PC is locked or the screen is off.
+- Readings refresh every minute, right away when a device is plugged in, removed or connects, after waking or unlocking, and when you hover the icon.
 - Click the icon for *Start with Windows* and *Exit*.
 
 Everything runs locally. The only network access is a daily check for updates on GitHub.
