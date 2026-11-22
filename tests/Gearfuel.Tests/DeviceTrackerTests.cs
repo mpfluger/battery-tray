@@ -42,9 +42,30 @@ public class DeviceTrackerTests
     {
         _tracker.Update([Reading("mouse", 88)], Start);
 
-        Assert.Equal((88, false), Single(_tracker.Update([], Start.AddMinutes(10))));
-        Assert.Equal((88, true), Single(_tracker.Update([], Start.AddMinutes(20))));
-        Assert.Empty(_tracker.Update([], Start.AddMinutes(61)));
+        Assert.Equal((88, false), Single(Silent(Start, minutes: 10)));
+        Assert.Equal((88, true), Single(Silent(Start.AddMinutes(10), minutes: 10)));
+        Assert.Empty(Silent(Start.AddMinutes(20), minutes: 41));
+    }
+
+    [Fact]
+    public void Devices_AreKept_WhileThePCSleeps_UntilTheyAnswerAgain()
+    {
+        _tracker.Update([new("mouse", "DeathAdder", 80, false) { Connection = "receiver" }], Start, new HashSet<string> { "receiver" });
+
+        // Overnight asleep, then woken: the receiver isn't back yet.
+        var devices = _tracker.Update([], Start.AddHours(8), new HashSet<string>());
+
+        Assert.Equal([("DeathAdder", 80, false)], devices.Select(d => (d.Name, d.Percent, d.Unreachable)));
+        Assert.Equal(TimeSpan.Zero, devices.Single().SinceSeen);
+    }
+
+    [Fact]
+    public void DeviceStillMissing_ALittleAfterWaking_IsGone()
+    {
+        _tracker.Update([new("pad", "DualShock 4", 80, false) { Connection = "pad" }], Start, new HashSet<string> { "pad" });
+        _tracker.Update([], Start.AddHours(8), new HashSet<string>());
+
+        Assert.Empty(_tracker.Update([], Start.AddHours(8).AddMinutes(1), new HashSet<string>()));
     }
 
     [Fact]
@@ -80,6 +101,15 @@ public class DeviceTrackerTests
         var devices = _tracker.Update([new("pad1", "DualShock 4", 80, false), new("pad2", "DualShock 4", 60, false)], Start.AddMinutes(1));
 
         Assert.Equal(2, devices.Count);
+    }
+
+    // Updates every minute, as while the PC is awake, with no device answering.
+    IReadOnlyList<DeviceStatus> Silent(DateTimeOffset from, int minutes)
+    {
+        IReadOnlyList<DeviceStatus> devices = [];
+        for (var minute = 1; minute <= minutes; minute++)
+            devices = _tracker.Update([], from.AddMinutes(minute));
+        return devices;
     }
 
     static (int, bool) Single(IReadOnlyList<DeviceStatus> devices) => (devices.Single().Percent, devices.Single().Unreachable);
