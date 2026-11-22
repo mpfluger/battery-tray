@@ -140,7 +140,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
 
         using var font = CreateFont();
         var textBounds = Rectangle.FromLTRB(row.Left + S(TextIndent), row.Top, row.Right - S(RightPadding), row.Bottom);
-        TextRenderer.DrawText(g, item.Text, font, textBounds, Theme.Text, Theme.Background,
+        TextRenderer.DrawText(g, item.Text, font, textBounds, Theme.Text, selected ? Theme.Hover : Theme.Background,
             TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
     }
 
