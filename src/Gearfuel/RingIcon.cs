@@ -19,9 +19,11 @@ static class RingIcon
         using var bitmap = new Bitmap(size.Width, size.Height);
         using (var graphics = Graphics.FromImage(bitmap))
         {
+            // Without devices, two empty rings keep the icon recognizable.
+            var empty = new Ring(0, Tone.Normal);
             Draw(graphics, new RectangleF(0, 0, size.Width, size.Height),
-                outer: devices.Count > 0 ? For(devices[0]) : null,
-                inner: devices.Count > 1 ? For(devices[1]) : null);
+                outer: devices.Count > 0 ? For(devices[0]) : empty,
+                inner: devices.Count > 1 ? For(devices[1]) : devices.Count == 0 ? empty : null);
         }
         return ToIcon(bitmap);
     }

@@ -28,7 +28,7 @@ Tested with a Razer DeathAdder V3 HyperSpeed and a Logitech PRO X TKL on their r
 
 ## Usage
 
-- The icon has up to two rings: outside, the device that needs charging soonest; inside, the next one. A full ring is a full battery.
+- The icon has up to two rings: outside, the device that needs charging soonest; inside, the next one. A full ring is a full battery; with no devices found, both rings are empty.
 - **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes, with its last level; it goes away after an hour. Mice and keyboards that are just asleep keep their color.
 - Hover the icon for every device, with its time left: until empty once it has been draining for a day, and until full while charging.
 - Readings refresh every minute, right away when a device is plugged in, removed or connects, after waking or unlocking, and when you hover the icon.

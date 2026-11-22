@@ -12,7 +12,6 @@ sealed class TrayApp : ApplicationContext
 
     readonly IBatterySource[] _sources;
     readonly DeviceTracker _tracker = new(new Forecast(Forecast.DefaultPath));
-    readonly Icon _appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)!;
     readonly NotifyIcon _notifyIcon;
     readonly HoverCard _card = new();
     readonly DeviceWatcher _deviceWatcher = new();
@@ -34,8 +33,8 @@ sealed class TrayApp : ApplicationContext
         Theme.RingColor = Settings.Load(Settings.DefaultPath).RingColor;
 
         // No tooltip text: it would cover the card. Shown once the first readings are in, rather than
-        // flashing the app icon first.
-        _notifyIcon = new NotifyIcon { Icon = _appIcon };
+        // flashing empty rings first.
+        _notifyIcon = new NotifyIcon { Icon = RingIcon.Render([]) };
         _notifyIcon.MouseMove += (_, _) => ShowCard();
         _notifyIcon.MouseUp += (_, e) => { if (e.Button is MouseButtons.Left or MouseButtons.Right) ShowMenu(); };
         _hoverTimer.Tick += (_, _) => HideCardIfPointerLeft();
@@ -108,8 +107,8 @@ sealed class TrayApp : ApplicationContext
     void UpdateIcon()
     {
         var previous = _notifyIcon.Icon;
-        _notifyIcon.Icon = _devices.Count == 0 ? _appIcon : RingIcon.Render(_devices);
-        if (previous != _appIcon) previous?.Dispose();
+        _notifyIcon.Icon = RingIcon.Render(_devices);
+        previous?.Dispose();
     }
 
     void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
@@ -199,9 +198,8 @@ sealed class TrayApp : ApplicationContext
             _followUpTimer.Dispose();
             _hoverTimer.Dispose();
             _card.Dispose();
-            if (_notifyIcon.Icon != _appIcon) _notifyIcon.Icon?.Dispose();
+            _notifyIcon.Icon?.Dispose();
             _notifyIcon.Dispose();
-            _appIcon.Dispose();
         }
         base.Dispose(disposing);
     }
