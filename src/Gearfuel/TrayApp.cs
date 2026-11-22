@@ -11,7 +11,8 @@ sealed class TrayApp : ApplicationContext
     static readonly TimeSpan HoverRefreshAfter = TimeSpan.FromSeconds(5);
 
     readonly IBatterySource[] _sources;
-    readonly DeviceTracker _tracker = new(new Forecast(Forecast.DefaultPath));
+    readonly Forecast _forecast = new(Forecast.DefaultPath);
+    readonly DeviceTracker _tracker;
     readonly NotifyIcon _notifyIcon;
     readonly HoverCard _card = new();
     readonly DeviceWatcher _deviceWatcher = new();
@@ -32,6 +33,7 @@ sealed class TrayApp : ApplicationContext
     public TrayApp(params IBatterySource[] sources)
     {
         _sources = sources;
+        _tracker = new(_forecast);
         Theme.RingColor = _settings.RingColor;
 
         // No tooltip text: it would cover the card. Shown once the first readings are in, rather than
@@ -54,6 +56,7 @@ sealed class TrayApp : ApplicationContext
         };
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.SessionSwitch += OnSessionSwitch;
+        SystemEvents.SessionEnding += OnSessionEnding;
         SystemEvents.UserPreferenceChanged += OnAppearanceChanged;
         SystemEvents.DisplaySettingsChanged += OnAppearanceChanged;
 
@@ -82,6 +85,11 @@ sealed class TrayApp : ApplicationContext
             // Shown as notifications, which wait while Focus Assist is on, e.g. during a full-screen game.
             foreach (var reminder in _reminders.Update(_devices))
                 if (_settings.ChargeReminders) _notifyIcon.ShowBalloonTip(0, reminder.Title, reminder.Text, ToolTipIcon.None);
+        }
+        catch (Exception e)
+        {
+            // Refreshes run unobserved, so this is the only place a failure can still be seen: in Copy diagnostics.
+            Diagnostics.Report($"Refresh failed: {e}");
         }
         finally
         {
@@ -121,6 +129,9 @@ sealed class TrayApp : ApplicationContext
         if (e.Mode == PowerModes.Resume) _ = RefreshAsync();
     }
 
+    // Windows may end the process without Exit being chosen, so the history is saved now.
+    void OnSessionEnding(object? sender, SessionEndingEventArgs e) => _forecast.Save();
+
     void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
     {
         if (e.Reason == SessionSwitchReason.SessionUnlock) _ = RefreshAsync();
@@ -140,7 +151,7 @@ sealed class TrayApp : ApplicationContext
         _menu.Show(Cursor.Position,
         [
             new($"Gearfuel {AppInfo.Version}", () => Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true })),
-            new("Copy diagnostics", () => Clipboard.SetText(Diagnostics.Describe(_devices, HidDevice.All()))),
+            new("Copy diagnostics", CopyDiagnostics),
             TrayMenuItem.Separator,
             new("Ring color", Submenu: [.. Enum.GetValues<RingColor>().Select(color => new TrayMenuItem(Name(color), () => SetRingColor(color), Checked: color == Theme.RingColor))]),
             new("Charge reminders", () => Save(_settings with { ChargeReminders = !_settings.ChargeReminders }), Checked: _settings.ChargeReminders),
@@ -157,6 +168,20 @@ sealed class TrayApp : ApplicationContext
             RingColor.Accent => "Windows accent color",
             _ => color.ToString(),
         };
+    }
+
+    void CopyDiagnostics()
+    {
+        IReadOnlyList<HidDevice> hidDevices = [];
+        try
+        {
+            hidDevices = HidDevice.All();
+        }
+        catch (Exception e)
+        {
+            Diagnostics.Report($"Listing HID devices failed: {e.Message}");
+        }
+        Clipboard.SetText(Diagnostics.Describe(_devices, hidDevices));
     }
 
     void SetRingColor(RingColor color)
@@ -202,6 +227,8 @@ sealed class TrayApp : ApplicationContext
         {
             SystemEvents.PowerModeChanged -= OnPowerModeChanged;
             SystemEvents.SessionSwitch -= OnSessionSwitch;
+            SystemEvents.SessionEnding -= OnSessionEnding;
+            _forecast.Save();
             SystemEvents.UserPreferenceChanged -= OnAppearanceChanged;
             SystemEvents.DisplaySettingsChanged -= OnAppearanceChanged;
             _deviceWatcher.Dispose();

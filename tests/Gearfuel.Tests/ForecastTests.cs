@@ -90,6 +90,26 @@ public class ForecastTests
     }
 
     [Fact]
+    public void SavingAtShutdown_KeepsReadingsSinceTheLastAutomaticSave()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"gearfuel-forecast-{Guid.NewGuid()}.json");
+        try
+        {
+            var forecast = new Forecast(path);
+            var end = Use(forecast, "pad", Start, TimeSpan.FromHours(1), 100, 94); // saved automatically at the end
+            Use(forecast, "pad", end, TimeSpan.FromMinutes(6), 94, 93);
+            forecast.Save();
+
+            // 7 points in 66 minutes; without the save, 6 points in 60.
+            AssertAbout(TimeSpan.FromHours(93 * 1.1 / 7), ofUse: true, new Forecast(path).Estimate("pad", 93, charging: false));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void HistoryFromBeforeVersion16_StartsOver()
     {
         var path = Path.Combine(Path.GetTempPath(), $"gearfuel-forecast-{Guid.NewGuid()}.json");

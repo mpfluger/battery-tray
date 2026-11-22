@@ -140,6 +140,9 @@ sealed class Forecast(string? path)
         return [];
     }
 
+    /// <summary>Saves what was learned since the last save, which happens every few minutes on its own.</summary>
+    public void Save() => Save(DateTimeOffset.Now);
+
     void Save(DateTimeOffset now)
     {
         _lastSave = now;
