@@ -19,7 +19,7 @@ sealed record TrayMenuItem(string Text, Action? Click = null, char? Icon = null,
 sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
 {
     public const char ExitIcon = (char)0xE711; // Segoe icon font: Cancel
-    const char CheckIcon = (char)0xE73E; // CheckMark
+    const char CheckIcon = (char)0xE73E, SubmenuIcon = (char)0xE76C; // CheckMark, ChevronRight
 
     // Measured from the Windows 10 taskbar menu, in pixels at 100% scaling.
     const int RowHeight = 32, SeparatorHeight = 9, TextIndent = 28, IconColumn = 32, RightPadding = 24, TopPadding = 4, BottomPadding = 8, MinWidth = 180;
@@ -90,7 +90,12 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
                 m.Result = 1;
                 return;
             case WmDrawItem:
-                Draw((DrawItem*)m.LParam);
+                var draw = (DrawItem*)m.LParam;
+                Draw(draw);
+                // Windows draws a small triangle over submenu items after this; clipping the whole item away
+                // keeps the chevron drawn here, like the taskbar menu's.
+                if (_entries[(int)draw->ItemData].Item.Submenu is not null)
+                    ExcludeClipRect(draw->Dc, draw->Item.Left, draw->Item.Top, draw->Item.Right, draw->Item.Bottom);
                 m.Result = 1;
                 return;
         }
@@ -147,7 +152,9 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
             return;
         }
 
-        if ((item.Checked ? CheckIcon : item.Icon) is { } glyph) DrawGlyph(g, glyph, new RectangleF(row.Left, row.Top, S(IconColumn), row.Height));
+        if ((item.Checked ? CheckIcon : item.Icon) is { } glyph) DrawGlyph(g, glyph, 14, new RectangleF(row.Left, row.Top, S(IconColumn), row.Height));
+        // Ends where the separators do.
+        if (item.Submenu is not null) DrawGlyph(g, SubmenuIcon, 12, new RectangleF(row.Right - S(8 + 7), row.Top, S(7), row.Height));
 
         using var font = CreateFont();
         var textBounds = Rectangle.FromLTRB(row.Left + S(TextIndent), row.Top, row.Right - S(RightPadding), row.Bottom);
@@ -156,11 +163,11 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
     }
 
     // Centered by the glyph's own outline: icon font glyphs don't sit in the middle of their text box.
-    void DrawGlyph(Graphics g, char glyph, RectangleF cell)
+    void DrawGlyph(Graphics g, char glyph, float size, RectangleF cell)
     {
         using var family = new FontFamily(Theme.IconFont);
         using var path = new GraphicsPath();
-        path.AddString(glyph.ToString(), family, (int)FontStyle.Regular, 14 * Scale, PointF.Empty, StringFormat.GenericTypographic);
+        path.AddString(glyph.ToString(), family, (int)FontStyle.Regular, size * Scale, PointF.Empty, StringFormat.GenericTypographic);
         var outline = path.GetBounds();
         using var center = new Matrix();
         center.Translate(cell.X + cell.Width / 2 - outline.X - outline.Width / 2, cell.Y + cell.Height / 2 - outline.Y - outline.Height / 2);
@@ -262,6 +269,9 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
     [LibraryImport("gdi32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool DeleteObject(nint gdiObject);
+
+    [LibraryImport("gdi32.dll")]
+    private static partial int ExcludeClipRect(nint dc, int left, int top, int right, int bottom);
 
     [LibraryImport("uxtheme.dll", EntryPoint = "#135")]
     private static partial int SetPreferredAppMode(int mode);
