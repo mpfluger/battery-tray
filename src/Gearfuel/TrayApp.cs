@@ -97,7 +97,7 @@ sealed class TrayApp : ApplicationContext
         }
         catch (Exception e)
         {
-            Trace.TraceWarning($"{source.GetType().Name} failed: {e}");
+            Diagnostics.Report($"{source.GetType().Name} failed: {e}");
             return [];
         }
     }
@@ -138,6 +138,9 @@ sealed class TrayApp : ApplicationContext
         {
             case TrayMenu.Command.Repository:
                 Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true });
+                break;
+            case TrayMenu.Command.CopyDiagnostics:
+                Clipboard.SetText(Diagnostics.Describe(_devices, HidDevice.All()));
                 break;
             case TrayMenu.Command.StartWithWindows:
                 StartWithWindows.Enabled = !StartWithWindows.Enabled;

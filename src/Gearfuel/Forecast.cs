@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace Gearfuel;
@@ -52,7 +51,7 @@ sealed class Forecast(string? path)
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
-            Trace.TraceWarning($"Starting without battery history: {e.Message}");
+            Diagnostics.Report($"Starting without battery history: {e.Message}");
         }
         return [];
     }
@@ -67,7 +66,7 @@ sealed class Forecast(string? path)
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            Trace.TraceWarning($"Couldn't save battery history: {e.Message}");
+            Diagnostics.Report($"Couldn't save battery history: {e.Message}");
         }
     }
 }

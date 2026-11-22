@@ -21,12 +21,12 @@ body:
     validations:
       required: true
   - type: textarea
-    id: hardware-ids
+    id: diagnostics
     attributes:
-      label: Hardware IDs
+      label: Diagnostics
       description: >
-        In Device Manager, find the device (or its receiver), open Properties → Details → Hardware Ids,
-        and paste the values. They identify the device's protocol.
+        With the device connected and awake, click Gearfuel's tray icon, choose Copy diagnostics, and paste here.
+        It lists the devices Gearfuel sees and any errors, without serial numbers.
       render: text
     validations:
       required: true
@@ -38,8 +38,3 @@ body:
         - "Yes"
         - "No"
         - Not a Bluetooth device
-  - type: input
-    id: version
-    attributes:
-      label: Gearfuel version
-      description: Shown at the top of the tray icon's menu.

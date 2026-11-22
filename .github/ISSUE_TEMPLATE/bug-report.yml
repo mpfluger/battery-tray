@@ -13,15 +13,11 @@ body:
     attributes:
       label: Devices involved
       placeholder: Razer DeathAdder V3 HyperSpeed (receiver)
-  - type: input
-    id: version
+  - type: textarea
+    id: diagnostics
     attributes:
-      label: Gearfuel version
-      description: Shown at the top of the tray icon's menu.
+      label: Diagnostics
+      description: Click Gearfuel's tray icon, choose Copy diagnostics, and paste here.
+      render: text
     validations:
       required: true
-  - type: input
-    id: windows
-    attributes:
-      label: Windows version
-      placeholder: Windows 11 24H2

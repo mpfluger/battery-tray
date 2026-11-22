@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Velopack;
 using Velopack.Sources;
 
@@ -29,7 +28,7 @@ static class Updater
             }
             catch (Exception e)
             {
-                Trace.TraceWarning($"Update failed: {e}");
+                Diagnostics.Report($"Update failed: {e.Message}");
             }
         } while (await timer.WaitForNextTickAsync());
     }

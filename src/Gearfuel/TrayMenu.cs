@@ -10,7 +10,7 @@ namespace Gearfuel;
 /// </summary>
 sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
 {
-    public enum Command { Repository = 1, StartWithWindows, Exit }
+    public enum Command { Repository = 1, CopyDiagnostics, StartWithWindows, Exit }
 
     // Measured from the Windows 10 taskbar menu, in pixels at 100% scaling.
     const int RowHeight = 32, SeparatorHeight = 9, TextIndent = 28, IconColumn = 32, RightPadding = 24, TopPadding = 4, BottomPadding = 8, MinWidth = 180;
@@ -35,6 +35,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
         _items =
         [
             new(Command.Repository, $"Gearfuel {AppInfo.Version}"),
+            new(Command.CopyDiagnostics, "Copy diagnostics"),
             Separator,
             new(Command.StartWithWindows, "Start with Windows", Checked: startWithWindows),
             Separator,
