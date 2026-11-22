@@ -2,9 +2,10 @@ using Gearfuel.Devices;
 
 namespace Gearfuel;
 
+/// <param name="Id">The reading's, so identical devices stay apart.</param>
 /// <param name="TimeLeft">Null while unknown.</param>
 /// <param name="SinceSeen">Since the device last answered; the other values are from then.</param>
-sealed record DeviceStatus(string Name, int Percent, bool Charging, TimeLeft? TimeLeft, TimeSpan SinceSeen)
+sealed record DeviceStatus(string Id, string Name, int Percent, bool Charging, TimeLeft? TimeLeft, TimeSpan SinceSeen)
 {
     const int LowPercent = 20;
     // Devices that stop answering are often just asleep, so their last level stays as is for a while.
@@ -46,7 +47,7 @@ sealed class DeviceTracker(Forecast forecast)
 
         return _devices.Values
             .Select(d => new DeviceStatus(
-                d.Reading.Name, d.Reading.Percent, d.Reading.Charging,
+                d.Reading.Id, d.Reading.Name, d.Reading.Percent, d.Reading.Charging,
                 forecast.Estimate(d.Reading.Id, d.Reading.Percent, d.Reading.Charging),
                 now - d.LastSeen))
             .OrderBy(d => d.Charging ? 2 : d.Low ? 0 : 1) // devices that need charging, then the rest, then charging ones

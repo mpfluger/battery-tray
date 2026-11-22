@@ -93,7 +93,7 @@ sealed partial class HoverCard : Form
             var levelColor = device.Low || device.Charging ? Theme.For(device.Tone) : textColor;
             TextRenderer.DrawText(g, device.Name, font, new Rectangle(nameX, y, nameWidth, rowHeight), textColor, Line | TextFormatFlags.EndEllipsis);
             TextRenderer.DrawText(g, $"{device.Percent}%", font, new Rectangle(nameX + nameWidth + gap, y, percentWidth, rowHeight), levelColor, Line | TextFormatFlags.Right);
-            TextRenderer.DrawText(g, TimeText(device), font, new Rectangle(Width - padding - timeWidth, y, timeWidth, rowHeight), device.Low ? levelColor : Theme.SecondaryText, Line | TextFormatFlags.Right);
+            TextRenderer.DrawText(g, TimeColumn(device), font, new Rectangle(Width - padding - timeWidth, y, timeWidth, rowHeight), device.Low ? levelColor : Theme.SecondaryText, Line | TextFormatFlags.Right);
         }
     }
 
@@ -118,25 +118,14 @@ sealed partial class HoverCard : Form
         }
     }
 
-    static string TimeText(DeviceStatus device) => device switch
+    static string TimeColumn(DeviceStatus device) => device switch
     {
-        { Unreachable: true } => $"{Duration(device.SinceSeen)} ago",
+        { Unreachable: true } => $"{TimeText.Short(device.SinceSeen)} ago",
         { Charging: true, Percent: >= 100 } => "full",
         { TimeLeft: null } => "learning…", // until the forecast has enough history
-        { TimeLeft: { OfUse: true } left } => $"~{UseDuration(left.Duration)} use",
-        { TimeLeft: { } left } when device.Charging => $"full in {Duration(left.Duration)}",
-        { TimeLeft: { } left } => Duration(left.Duration),
-    };
-
-    // Hours of use read best in hours, even past two days.
-    static string UseDuration(TimeSpan time) => time.TotalHours < 1 ? Duration(time) : $"{(int)time.TotalHours}h";
-
-    internal static string Duration(TimeSpan time) => time switch
-    {
-        { TotalHours: < 1 } => $"{Math.Max(1, (int)time.TotalMinutes)}m",
-        { TotalDays: < 2 } => $"{(int)time.TotalHours}h",
-        { TotalDays: < 14 } => $"{(int)time.TotalDays}d",
-        _ => $"{(int)(time.TotalDays / 7)}w",
+        { TimeLeft: { OfUse: true } left } => $"~{TimeText.Hours(left.Duration)} use",
+        { TimeLeft: { } left } when device.Charging => $"full in {TimeText.Short(left.Duration)}",
+        { TimeLeft: { } left } => TimeText.Short(left.Duration),
     };
 
     int Scale(int pixels) => (int)Math.Round(pixels * DeviceDpi / 96f);

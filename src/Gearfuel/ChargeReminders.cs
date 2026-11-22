@@ -15,7 +15,7 @@ sealed class ChargeReminders
     // A rise this large without being seen charging means the device was charged elsewhere.
     const int Recharged = 10;
 
-    readonly Dictionary<string, int> _remindedAt = []; // percent at the reminder, by device name
+    readonly Dictionary<string, int> _remindedAt = []; // percent at the reminder, by device ID
     readonly HashSet<string> _charging = [];
 
     public IReadOnlyList<Reminder> Update(IReadOnlyList<DeviceStatus> devices)
@@ -26,16 +26,16 @@ sealed class ChargeReminders
         {
             if (device.Charging)
             {
-                _remindedAt.Remove(device.Name);
+                _remindedAt.Remove(device.Id);
                 // Only a charge that was seen below full ends in a reminder, not a device that's always plugged in.
-                if (device.Percent < 100) _charging.Add(device.Name);
-                else if (_charging.Remove(device.Name)) full.Add(new($"{device.Name} is charged", "It's full, so you can unplug it."));
+                if (device.Percent < 100) _charging.Add(device.Id);
+                else if (_charging.Remove(device.Id)) full.Add(new($"{device.Name} is charged", "It's full, so you can unplug it."));
                 continue;
             }
-            _charging.Remove(device.Name);
-            if (_remindedAt.TryGetValue(device.Name, out var at) && device.Percent >= at + Recharged) _remindedAt.Remove(device.Name);
+            _charging.Remove(device.Id);
+            if (_remindedAt.TryGetValue(device.Id, out var at) && device.Percent >= at + Recharged) _remindedAt.Remove(device.Id);
 
-            if (device.Low && (device.SinceSeen >= Paused || device.Percent <= NearlyEmpty) && _remindedAt.TryAdd(device.Name, device.Percent))
+            if (device.Low && (device.SinceSeen >= Paused || device.Percent <= NearlyEmpty) && _remindedAt.TryAdd(device.Id, device.Percent))
                 low.Add(device);
         }
 
@@ -50,8 +50,8 @@ sealed class ChargeReminders
 
     static string Outlook(DeviceStatus device) => device.TimeLeft switch
     {
-        { OfUse: true } left => $", about {HoverCard.Duration(left.Duration)} of use",
-        { } left => $", about {HoverCard.Duration(left.Duration)} at your usual pace",
+        { OfUse: true } left => $", about {TimeText.Short(left.Duration)} of use",
+        { } left => $", about {TimeText.Short(left.Duration)} at your usual pace",
         null => "",
     };
 }

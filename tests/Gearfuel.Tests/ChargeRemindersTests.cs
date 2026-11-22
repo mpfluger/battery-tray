@@ -40,7 +40,7 @@ public class ChargeRemindersTests
     [Fact]
     public void DevicesRunningLowTogether_ShareOneReminder()
     {
-        var reminder = Assert.Single(_reminders.Update([Pad(15, awake: false), new("PRO X TKL", 10, false, null, TimeSpan.FromMinutes(5))]));
+        var reminder = Assert.Single(_reminders.Update([Pad(15, awake: false), new("keys", "PRO X TKL", 10, false, null, TimeSpan.FromMinutes(5))]));
 
         Assert.Equal("Charge 2 devices", reminder.Title);
         Assert.Equal("DualShock 4 (15%), PRO X TKL (10%)", reminder.Text);
@@ -59,7 +59,15 @@ public class ChargeRemindersTests
     public void AlwaysPluggedInDevice_IsNeverReportedFull() =>
         Assert.Empty(_reminders.Update([Pad(100, awake: true, charging: true)]));
 
-    static DeviceStatus Pad(int percent, bool awake, bool charging = false) =>
-        new("DualShock 4", percent, charging, charging ? null : new TimeLeft(TimeSpan.FromHours(2), OfUse: true),
+    [Fact]
+    public void IdenticalDevices_AreRemindedOfSeparately()
+    {
+        _reminders.Update([Pad(15, awake: false)]);
+
+        Assert.Single(_reminders.Update([Pad(15, awake: false), Pad(12, awake: false, id: "pad2")]));
+    }
+
+    static DeviceStatus Pad(int percent, bool awake, bool charging = false, string id = "pad1") =>
+        new(id, "DualShock 4", percent, charging, charging ? null : new TimeLeft(TimeSpan.FromHours(2), OfUse: true),
             awake ? TimeSpan.Zero : TimeSpan.FromMinutes(3));
 }
