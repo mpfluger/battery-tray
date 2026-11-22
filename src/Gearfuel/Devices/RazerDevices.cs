@@ -33,7 +33,7 @@ sealed class RazerDevices : IBatterySource
                 var charging = await QueryAsync(handle, transactionId, PowerClass, GetCharging, 2) is [_, 1, ..];
                 // A mouse charging over its cable shows up as a second device; the serial ties both to one.
                 var serial = Serial(await QueryAsync(handle, transactionId, InfoClass, GetSerial, SerialLength));
-                readings.Add(new(serial is null ? device.Path : $"razer:{serial}", device.ProductName, level * 100 / 255, charging) { Level = level * 100.0 / 255 });
+                readings.Add(new(serial is null ? device.Path : $"razer:{serial}", device.ProductName, level * 100 / 255, charging) { Level = level * 100.0 / 255, Connection = device.Path });
                 break;
             }
         }

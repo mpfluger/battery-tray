@@ -15,6 +15,14 @@ public class ChargeRemindersTests
     }
 
     [Fact]
+    public void LowDevice_SwitchedOff_IsRemindedOfAsItDisappears()
+    {
+        Assert.Empty(_reminders.Update([Pad(15, awake: true)]));
+
+        Assert.Equal("Charge your DualShock 4", Assert.Single(_reminders.Update([])).Title);
+    }
+
+    [Fact]
     public void NearlyEmptyDevice_IsRemindedOf_EvenInUse() =>
         Assert.Single(_reminders.Update([Pad(5, awake: true)]));
 

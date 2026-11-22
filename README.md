@@ -31,7 +31,7 @@ Tested with a Razer DeathAdder V3 HyperSpeed and a Logitech PRO X TKL on their r
 ## Usage
 
 - The icon has up to two rings: outside, the device that needs charging soonest; inside, the next one. A full ring is a full battery; with no devices found, both rings are empty.
-- **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes, with its last level; it goes away after an hour. Mice and keyboards that are just asleep keep their color.
+- **Red**: won't last a day at its usual pace (20% or less, until Gearfuel has learned the pace). **Green**: charging. **Gray**: no answer for 15 minutes, with its last level; it goes away after an hour. Mice and keyboards that are just asleep keep their color, and devices that disconnect, like a controller switched off, go away right away.
 - Hover the icon for every device, with its time left. After about an hour of use, that's hours of use left (*~40h use*), or for a device that has barely drained yet, how long it lasts at least (*100h+ use*); after a day, days left at your usual pace, which keeps adapting to the last few days of use. Charging doesn't reset what Gearfuel has learned, and while charging it shows the time until full.
 - When a device won't last the day, Gearfuel reminds you to charge it once you pause, e.g. when a controller is switched off, and says when a charging one is full. Windows' Focus Assist can hold them back while you play.
 - Readings refresh every minute, right away when a device is plugged in, removed or connects, after waking or unlocking, and when you hover the icon.

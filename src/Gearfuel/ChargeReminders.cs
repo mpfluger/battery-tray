@@ -4,7 +4,7 @@ readonly record struct Reminder(string Title, string Text);
 
 /// <summary>
 /// Decides when to remind about charging: once per discharge, when a device that won't last the day pauses (falls
-/// asleep, or is switched off), so the reminder doesn't interrupt a game; and once per charge, when it's full.
+/// asleep, or is switched off and disappears), so the reminder doesn't interrupt a game; and once per charge, when it's full.
 /// </summary>
 sealed class ChargeReminders
 {
@@ -17,13 +17,18 @@ sealed class ChargeReminders
 
     readonly Dictionary<string, int> _remindedAt = []; // percent at the reminder, by device ID
     readonly HashSet<string> _charging = [];
+    IReadOnlyList<DeviceStatus> _previous = [];
 
     public IReadOnlyList<Reminder> Update(IReadOnlyList<DeviceStatus> devices)
     {
         var low = new List<DeviceStatus>();
         var full = new List<Reminder>();
-        foreach (var device in devices)
+        // A device that disappeared since the last update, e.g. a controller switched off, has paused for good.
+        var vanished = _previous.Where(p => devices.All(d => d.Id != p.Id)).ToList();
+        _previous = devices;
+        foreach (var device in devices.Concat(vanished))
         {
+            var paused = device.SinceSeen >= Paused || vanished.Contains(device);
             if (device.Charging)
             {
                 _remindedAt.Remove(device.Id);
@@ -35,7 +40,7 @@ sealed class ChargeReminders
             _charging.Remove(device.Id);
             if (_remindedAt.TryGetValue(device.Id, out var at) && device.Percent >= at + Recharged) _remindedAt.Remove(device.Id);
 
-            if (device.Low && (device.SinceSeen >= Paused || device.Percent <= NearlyEmpty) && _remindedAt.TryAdd(device.Id, device.Percent))
+            if (device.Low && (paused || device.Percent <= NearlyEmpty) && _remindedAt.TryAdd(device.Id, device.Percent))
                 low.Add(device);
         }
 

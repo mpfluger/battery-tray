@@ -48,6 +48,22 @@ public class DeviceTrackerTests
     }
 
     [Fact]
+    public void DeviceWhoseConnectionIsGone_GoesAwayRightAway()
+    {
+        _tracker.Update([new("pad", "DualShock 4", 80, false) { Connection = "pad" }], Start, new HashSet<string> { "pad" });
+
+        Assert.Empty(_tracker.Update([], Start.AddMinutes(1), new HashSet<string>()));
+    }
+
+    [Fact]
+    public void AsleepDevice_BehindAReceiverThatIsStillThere_Stays()
+    {
+        _tracker.Update([new("mouse", "DeathAdder", 80, false) { Connection = "receiver" }], Start, new HashSet<string> { "receiver" });
+
+        Assert.Single(_tracker.Update([], Start.AddMinutes(1), new HashSet<string> { "receiver" }));
+    }
+
+    [Fact]
     public void DeviceSwitchingConnection_IsListedOnce()
     {
         _tracker.Update([new("receiver#1", "DeathAdder", 89, false)], Start);

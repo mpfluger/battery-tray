@@ -43,7 +43,7 @@ sealed class LogitechDevices : IBatterySource
             var batteries = await ReadAsync(stream, candidates);
             if (probe) _knownSlots[hid.Path] = (batteries.Select(b => b.Device).ToArray(), now);
             foreach (var battery in batteries)
-                readings.Add(new($"{hid.Path}#{battery.Device}", battery.Name ?? hid.ProductName, battery.Percent, battery.Charging));
+                readings.Add(new($"{hid.Path}#{battery.Device}", battery.Name ?? hid.ProductName, battery.Percent, battery.Charging) { Connection = hid.Path });
         }
         return readings;
     }

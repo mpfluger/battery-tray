@@ -27,7 +27,7 @@ sealed class PlayStationControllers : IBatterySource
             if (device.VendorId != Sony || !Models.TryGetValue(device.ProductId, out var model)) continue;
 
             if (await ReadBatteryAsync(device, isDualSense: model.StartsWith("DualSense")) is (var percent, var charging))
-                readings.Add(new(device.Path, model, percent, charging));
+                readings.Add(new(device.Path, model, percent, charging) { Connection = device.Path });
         }
         return readings;
     }

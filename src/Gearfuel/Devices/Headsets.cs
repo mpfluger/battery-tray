@@ -37,7 +37,7 @@ sealed class Headsets : IBatterySource
             {
                 await using var stream = hid.OpenStream();
                 if (await model.ReadAsync(Asker(stream, hid)) is { } battery)
-                    readings.Add(new(hid.Path, hid.ProductName is { Length: > 0 } name ? name : model.Name, battery.Percent, battery.Charging));
+                    readings.Add(new(hid.Path, hid.ProductName is { Length: > 0 } name ? name : model.Name, battery.Percent, battery.Charging) { Connection = hid.Path });
             }
             catch (IOException e)
             {

@@ -22,12 +22,14 @@ sealed record DeviceStatus(string Id, string Name, int Percent, bool Charging, T
 /// <summary>Keeps the last known state of recently seen devices, most urgent first.</summary>
 sealed class DeviceTracker(Forecast forecast)
 {
-    // Devices that stop answering show as unreachable for a while, then go away.
+    // Devices that stop answering may just be asleep: they show as unreachable for a while, then go away.
+    // Devices whose connection is gone go away right away.
     static readonly TimeSpan ForgetAfter = TimeSpan.FromHours(1);
 
     readonly Dictionary<string, (BatteryReading Reading, DateTimeOffset LastSeen)> _devices = [];
 
-    public IReadOnlyList<DeviceStatus> Update(IReadOnlyList<BatteryReading> readings, DateTimeOffset now)
+    /// <param name="connections">The HID collections present now; null when unknown.</param>
+    public IReadOnlyList<DeviceStatus> Update(IReadOnlyList<BatteryReading> readings, DateTimeOffset now, IReadOnlySet<string>? connections = null)
     {
         var answered = readings.Select(r => r.Id).ToHashSet();
         foreach (var reading in readings)
@@ -42,8 +44,10 @@ sealed class DeviceTracker(Forecast forecast)
             _devices[reading.Id] = (reading, now);
             forecast.Observe(reading.Id, reading.Level, reading.Charging, now);
         }
-        foreach (var id in _devices.Where(d => now - d.Value.LastSeen > ForgetAfter).Select(d => d.Key).ToList())
+        foreach (var id in _devices.Where(d => now - d.Value.LastSeen > ForgetAfter || IsGone(d.Value.Reading)).Select(d => d.Key).ToList())
             _devices.Remove(id);
+
+        bool IsGone(BatteryReading reading) => reading.Connection is { } connection && connections?.Contains(connection) == false;
 
         return _devices.Values
             .Select(d => new DeviceStatus(

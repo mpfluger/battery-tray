@@ -77,7 +77,7 @@ sealed class TrayApp : ApplicationContext
             var hidDevices = await Task.Run(HidDevice.All);
             var readings = await Task.WhenAll(_sources.Select(source => ReadAsync(source, hidDevices)));
             _lastRefresh = DateTimeOffset.Now;
-            _devices = _tracker.Update(readings.SelectMany(r => r).ToList(), _lastRefresh);
+            _devices = _tracker.Update(readings.SelectMany(r => r).ToList(), _lastRefresh, hidDevices.Select(h => h.Path).ToHashSet());
             UpdateIcon();
             _trayIcon.Text = Summary(_devices);
             if (_card.Visible) _card.ShowNear(_hoverPoint, _devices);
