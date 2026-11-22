@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace Gearfuel;
 
 /// <summary>
-/// The tray icon's menu: a native Windows menu whose items Gearfuel draws to the measurements and
+/// The tray icon's menu: a native Windows menu. On Windows 10, Gearfuel draws its items to the measurements and
 /// colors of the taskbar's own menu, as Explorer does. Windows still provides the frame, shadow and
 /// keyboard handling.
 /// </summary>
@@ -13,8 +13,11 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
     public enum Command { Repository = 1, Refresh, StartWithWindows, Exit }
 
     // Measured from the Windows 10 taskbar menu, in pixels at 100% scaling.
-    const int RowHeight = 32, SeparatorHeight = 9, TextIndent = 28, IconColumn = 32, RightPadding = 24, EdgePadding = 4, MinWidth = 180;
+    const int RowHeight = 32, SeparatorHeight = 9, TextIndent = 28, IconColumn = 32, RightPadding = 24, TopPadding = 4, BottomPadding = 8, MinWidth = 180;
     const char CheckGlyph = '', ExitGlyph = '';
+
+    // Windows 11 draws native menus in its own modern style already; owner-drawn rows would look out of place there.
+    static readonly bool DrawsItems = Environment.OSVersion.Version.Build < 22000;
 
     sealed record Item(Command? Command, string Text, char? Icon = null, bool Checked = false)
     {
@@ -45,12 +48,18 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
         {
             for (var i = 0; i < _items.Count; i++)
             {
-                var flags = MfOwnerDraw | (_items[i].IsSeparator ? MfSeparator : 0);
-                AppendMenuW(menu, flags, (nint)(_items[i].Command ?? 0), i); // the index comes back in measure and draw messages
+                var item = _items[i];
+                var id = (nint)(item.Command ?? 0);
+                var flags = (item.IsSeparator ? MfSeparator : 0) | (item.Checked ? MfChecked : 0);
+                if (DrawsItems) AppendMenuW(menu, flags | MfOwnerDraw, id, i); // the index comes back in measure and draw messages
+                else AppendMenuTextW(menu, flags, id, item.IsSeparator ? null : item.Text);
             }
-            // Paints the frame's inner padding in the same color as the items.
-            var info = new MenuInfo { Size = sizeof(MenuInfo), Mask = MimBackground, Background = background };
-            SetMenuInfo(menu, ref info);
+            if (DrawsItems)
+            {
+                // Paints the frame's inner padding in the same color as the items.
+                var info = new MenuInfo { Size = sizeof(MenuInfo), Mask = MimBackground, Background = background };
+                SetMenuInfo(menu, ref info);
+            }
 
             MatchTaskbarTheme();
             // Both as the TrackPopupMenu documentation prescribes for notification icons: without them,
@@ -99,7 +108,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
         var widest = _items.Max(i => TextRenderer.MeasureText(i.Text, font, Size.Empty, TextFormatFlags.NoPrefix).Width);
         // Windows adds room for a check mark to every owner-drawn item's width; take it back.
         measure->ItemWidth = (uint)Math.Max(S(MinWidth), S(TextIndent) + widest + S(RightPadding) - GetSystemMetrics(SmCxMenuCheck));
-        measure->ItemHeight = (uint)(S(item.IsSeparator ? SeparatorHeight : RowHeight) + (index == 0 || index == _items.Count - 1 ? S(EdgePadding) : 0));
+        measure->ItemHeight = (uint)(S(item.IsSeparator ? SeparatorHeight : RowHeight) + (index == 0 ? S(TopPadding) : 0) + (index == _items.Count - 1 ? S(BottomPadding) : 0));
     }
 
     void Draw(DrawItem* draw)
@@ -109,7 +118,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
         using var g = Graphics.FromHdc(draw->Dc);
         var bounds = Rectangle.FromLTRB(draw->Item.Left, draw->Item.Top, draw->Item.Right, draw->Item.Bottom);
         // The edge padding of the first and last rows belongs outside them.
-        var row = Rectangle.FromLTRB(bounds.Left, bounds.Top + (index == 0 ? S(EdgePadding) : 0), bounds.Right, bounds.Bottom - (index == _items.Count - 1 ? S(EdgePadding) : 0));
+        var row = Rectangle.FromLTRB(bounds.Left, bounds.Top + (index == 0 ? S(TopPadding) : 0), bounds.Right, bounds.Bottom - (index == _items.Count - 1 ? S(BottomPadding) : 0));
         var selected = (draw->State & OdsSelected) != 0 && !item.IsSeparator;
 
         using (var background = new SolidBrush(Theme.Background)) g.FillRectangle(background, bounds);
@@ -163,7 +172,7 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
     public void Dispose() => DestroyHandle();
 
     const int WmMeasureItem = 0x2C, WmDrawItem = 0x2B, WmNull = 0x0;
-    const uint MfSeparator = 0x800, MfOwnerDraw = 0x100;
+    const uint MfChecked = 0x8, MfSeparator = 0x800, MfOwnerDraw = 0x100;
     const uint TpmRightButton = 0x2, TpmBottomAlign = 0x20, TpmReturnCmd = 0x100;
     const uint MimBackground = 0x2, OdsSelected = 0x1;
     const int SmCxMenuCheck = 71;
@@ -206,6 +215,10 @@ sealed unsafe partial class TrayMenu : NativeWindow, IDisposable
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool AppendMenuW(nint menu, uint flags, nint id, nint itemData);
+
+    [LibraryImport("user32.dll", EntryPoint = "AppendMenuW", StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool AppendMenuTextW(nint menu, uint flags, nint id, string? text);
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
