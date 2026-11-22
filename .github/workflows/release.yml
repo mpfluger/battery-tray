@@ -39,7 +39,7 @@ jobs:
           Get-ChildItem Releases -Exclude 'Gearfuel-*' | Remove-Item # releases before v1.1.0 were named BatteryTray
           dotnet vpk pack --packId Gearfuel --packVersion $env:VERSION --runtime win-x64 --packDir publish --mainExe Gearfuel.exe `
             --packTitle Gearfuel --packAuthors "Mark Pfluger" --icon src/Gearfuel/Gearfuel.ico `
-            --framework net10.0-x64-desktop --shortcuts StartMenuRoot --outputDir Releases
+            --framework net10.0-x64-desktop --shortcuts StartMenuRoot --noPortable --outputDir Releases
 
       - name: Create GitHub release
         run: |
