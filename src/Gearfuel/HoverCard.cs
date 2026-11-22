@@ -1,8 +1,13 @@
+using System.Runtime.InteropServices;
+
 namespace Gearfuel;
 
 /// <summary>The list of all devices, shown while the pointer rests on the tray icon.</summary>
-sealed class HoverCard : Form
+sealed partial class HoverCard : Form
 {
+    // Windows 11 rounds its popups' corners and draws their border; Windows 10's are square, with a drawn border.
+    static readonly bool RoundsCorners = Environment.OSVersion.Version.Build >= 22000;
+
     // Layout in pixels at 100% scaling.
     const int Width100 = 300, Padding100 = 10, RowHeight100 = 26, Marker100 = 16, Gap100 = 10, PercentColumn100 = 40, TimeColumn100 = 76;
 
@@ -20,6 +25,15 @@ sealed class HoverCard : Form
 
     // Shown on top without taking focus from the app in use.
     protected override bool ShowWithoutActivation => true;
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        if (!RoundsCorners) return;
+        const int cornerPreference = 33, round = 2;
+        var preference = round;
+        DwmSetWindowAttribute(Handle, cornerPreference, ref preference, sizeof(int));
+    }
 
     protected override CreateParams CreateParams
     {
@@ -52,7 +66,11 @@ sealed class HoverCard : Form
         // Sized in pixels for this window's monitor; points would follow the system DPI instead.
         using var font = new Font("Segoe UI", Scale(12), GraphicsUnit.Pixel);
         g.Clear(Theme.Background);
-        using (var border = new Pen(Theme.Border)) g.DrawRectangle(border, 0, 0, Width - 1, Height - 1);
+        if (!RoundsCorners)
+        {
+            using var border = new Pen(Theme.Border);
+            g.DrawRectangle(border, 0, 0, Width - 1, Height - 1);
+        }
 
         int padding = Scale(Padding100), rowHeight = Scale(RowHeight100), marker = Scale(Marker100), gap = Scale(Gap100);
         int percentWidth = Scale(PercentColumn100), timeWidth = Scale(TimeColumn100);
@@ -122,4 +140,7 @@ sealed class HoverCard : Form
     };
 
     int Scale(int pixels) => (int)Math.Round(pixels * DeviceDpi / 96f);
+
+    [LibraryImport("dwmapi.dll")]
+    private static partial int DwmSetWindowAttribute(nint window, int attribute, ref int value, int size);
 }
