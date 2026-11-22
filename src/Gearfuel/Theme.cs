@@ -22,7 +22,9 @@ static class Theme
         _ => RingColor switch
         {
             RingColor.Accent when Accent() is { } accent => accent,
+            RingColor.Blue => IsLight ? Color.FromArgb(0x00, 0x5F, 0xB8) : Color.FromArgb(0x60, 0xCD, 0xFF),
             RingColor.Purple => IsLight ? Color.FromArgb(0x6B, 0x3F, 0xC4) : Color.FromArgb(0xC4, 0xA3, 0xFF),
+            RingColor.Pink => IsLight ? Color.FromArgb(0xB4, 0x00, 0x9E) : Color.FromArgb(0xFF, 0x8A, 0xD8),
             RingColor.Yellow => IsLight ? Color.FromArgb(0x8A, 0x64, 0x00) : Color.FromArgb(0xFF, 0xD5, 0x4A),
             _ => Text,
         },

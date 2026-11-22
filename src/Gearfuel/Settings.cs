@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Gearfuel;
 
-enum RingColor { Automatic, Accent, Purple, Yellow }
+enum RingColor { Automatic, Accent, Blue, Purple, Pink, Yellow }
 
 /// <summary>Choices made in the tray menu. Starting with Windows isn't one: it is the registry's Run entry itself.</summary>
 sealed record Settings(RingColor RingColor = RingColor.Automatic)
