@@ -26,6 +26,7 @@ sealed class TrayApp : ApplicationContext
     DateTimeOffset _lastRefresh;
     Point _hoverPoint;
     bool _refreshing, _refreshAgain, _menuOpen;
+    long _menuClosedAt;
 
     public TrayApp(params IBatterySource[] sources)
     {
@@ -123,10 +124,15 @@ sealed class TrayApp : ApplicationContext
 
     void ShowMenu()
     {
+        // Clicking the icon while the menu is open closes the menu, and Windows then passes that same click
+        // on to the icon; it must not reopen the menu.
+        if (Environment.TickCount64 - _menuClosedAt < 300) return;
+
         HideCard();
         _menuOpen = true;
         var command = _menu.Show(Cursor.Position, StartWithWindows.Enabled);
         _menuOpen = false;
+        _menuClosedAt = Environment.TickCount64;
 
         switch (command)
         {
